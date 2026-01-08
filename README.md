@@ -41,26 +41,6 @@ All daily logs are **saved automatically** and scoped by:
 - Local state management with `useState`, `useEffect`, and `useMemo`
 
 
-## 📂 Project Structure
-src/
-├── components/
-│ └── layout/
-│ ├── AppShell.jsx
-│ └── PetListItem.jsx
-├── pages/
-│ ├── Pets.jsx
-│ ├── PetProfile.jsx
-│ ├── DailyCheck.jsx
-│ ├── DailyHistory.jsx
-│ ├── PetRoutine.jsx
-│ └── Emergency.jsx
-├── lib/
-│ └── dailyLog.js
-├── App.jsx
-├── main.jsx
-└── index.css
-
-
 ## 🚀 Getting Started
 
 ```bash
