@@ -1,46 +1,33 @@
 import { useState } from "react";
+import PetListItem from "../components/layout/PetListItem";
 
-const initialPets = [
-  { id: "p1", name: "Tom", species: "cat" },
-  { id: "p2", name: "Sophia", species: "dog" },
+const seedPets = [
+  { id: "p1", name: "Tom", species: "cat", breed: "Domestic Shorthair" },
+  { id: "p2", name: "Sophia", species: "cat", breed: "Russian Blue" },
+    { id: "p3", name: "Max", species: "dog", breed: "Golden Retriever" },
 ];
 
 export default function Pets({ onSelectPet }) {
-  const [pets] = useState(initialPets);
+  const [pets] = useState(seedPets);
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">My Pets</h2>
-          <p className="text-muted-foreground">Select a pet to view their tracker.</p>
-        </div>
+    <div className="w-full max-w-md">
+      <div className="rounded-2xl bg-white shadow-sm ring-1 ring-gray-900/5">
+        <ul role="list" className="list-none divide-y divide-gray-100 p-0 m-0">
+          {pets.map((pet) => (
+            <PetListItem key={pet.id} pet={pet} onSelect={onSelectPet} />
+          ))}
 
-        <button className="rounded-xl border px-4 py-2 text-sm font-medium hover:bg-black/5">
-          + Add new pet
-        </button>
-      </header>
-
-      <div className="space-y-3">
-        {pets.map((pet) => (
-          <button
-            key={pet.id}
-            onClick={() => onSelectPet(pet)}
-            className="w-full text-left rounded-2xl border p-4 hover:bg-black/5"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full border flex items-center justify-center text-sm">
-                {pet.species === "cat" ? "🐱" : "🐶"}
-              </div>
-              <div>
-                <div className="font-semibold">{pet.name}</div>
-                <div className="text-sm text-muted-foreground">
-                  {pet.species === "cat" ? "Cat" : "Dog"}
-                </div>
-              </div>
-            </div>
-          </button>
-        ))}
+          <li className="p-4">
+            <button
+              type="button"
+              className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-900 shadow-sm hover:bg-gray-50"
+              onClick={() => alert("Add pet – coming soon")}
+            >
+              + Add pet
+            </button>
+          </li>
+        </ul>
       </div>
     </div>
   );

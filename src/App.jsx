@@ -1,20 +1,19 @@
 import { useState } from "react";
 import { AppShell } from "./components/layout/AppShell";
 
+
 import Pets from "./pages/Pets";
 import PetProfile from "./pages/PetProfile";
 import DailyCheck from "./pages/DailyCheck";
-import Nutrition from "./pages/Nutrition";
-import VetAndMeds from "./pages/VetAndMeds";
+import DailyHistory from "./pages/DailyHistory";
 
 
 export default function App() {
   const [selectedPet, setSelectedPet] = useState(null);
-  const [screen, setScreen] = useState("pets"); // "pets" | "profile" | "daily" | "nutrition" | "vet"
+  const [screen, setScreen] = useState("pets"); // pets | profile | daily | history
 
 
-  const title =
-    screen === "pets" ? "My Pets" : selectedPet?.name ?? "PawTrack";
+  const title = screen === "pets" ? "My Pets" : selectedPet?.name ?? "PawTrack";
 
   return (
     <AppShell title={title}>
@@ -34,26 +33,20 @@ export default function App() {
             setSelectedPet(null);
             setScreen("pets");
           }}
-          onOpenDailyCheck={() => setScreen("daily")}
-          onOpenNutrition={() => setScreen("nutrition")}
-          onOpenVet={() => setScreen("vet")}
+          onOpenDaily={() => setScreen("daily")}
+          onOpenRoutine={() => alert("Routine (next)")}
+          onOpenEmergency={() => alert("Emergency (next)")}
+          onOpenHistory={() => setScreen("history")}
         />
       )}
-
-      {screen === "nutrition" && selectedPet && (
-        <Nutrition pet={selectedPet} onBack={() => setScreen("profile")} />
-    )}
 
       {screen === "daily" && selectedPet && (
-        <DailyCheck
-          pet={selectedPet}
-          onBack={() => setScreen("profile")}
-        />
+        <DailyCheck pet={selectedPet} onBack={() => setScreen("profile")} />
       )}
 
-      {screen === "vet" && selectedPet && (
-        <VetAndMeds pet={selectedPet} onBack={() => setScreen("profile")} />
-    )}
+      {screen === "history" && selectedPet && (
+        <DailyHistory pet={selectedPet} onBack={() => setScreen("profile")} />
+      )}
 
     </AppShell>
   );
