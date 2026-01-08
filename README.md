@@ -1,16 +1,70 @@
-# React + Vite
+# PawTrack 🐾
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PawTrack is a pet care tracking app designed to help pet owners keep daily records of their pets’ routines, health, and activities in a simple and organized way.
 
-Currently, two official plugins are available:
+This project is built as a learning-focused React application, emphasizing clean state management, reusable components, and real-world app structure.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🐶🐱 Pet Management
+- View and select pets
+- Separate profiles per pet
+- Species-aware behavior (cats vs dogs)
 
-## Expanding the ESLint configuration
+### ✅ Daily Check
+Each pet has a **daily care log** that includes:
+- Water
+- Food
+  - Dry food (cups)
+  - Wet food (can amount / spoon count)
+- Medication
+- Playtime (duration)
+- Walks (for dogs only, with duration)
+- Litter box (for cats only)
+- Free-form daily notes
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+All daily logs are **saved automatically** and scoped by:
+- Pet
+- Date
+
+### 📅 Daily History
+- View past daily logs
+- See summaries per day (food, playtime, walks, notes)
+- Data persists using `localStorage`
+  
+
+## 🧠 Technical Highlights
+- **React + Vite**
+- **Tailwind CSS** for UI styling
+- Local state management with `useState`, `useEffect`, and `useMemo`
+
+
+## 📂 Project Structure
+src/
+├── components/
+│ └── layout/
+│ ├── AppShell.jsx
+│ └── PetListItem.jsx
+├── pages/
+│ ├── Pets.jsx
+│ ├── PetProfile.jsx
+│ ├── DailyCheck.jsx
+│ ├── DailyHistory.jsx
+│ ├── PetRoutine.jsx
+│ └── Emergency.jsx
+├── lib/
+│ └── dailyLog.js
+├── App.jsx
+├── main.jsx
+└── index.css
+
+
+## 🚀 Getting Started
+
+```bash
+npm install
+npm run dev
+
+
