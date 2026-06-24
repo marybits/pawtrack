@@ -14,6 +14,10 @@ export async function logEvent(req, res) {
     });
   }
 
+  if (occurredAt && new Date(occurredAt) > new Date()) {
+    return res.status(400).json({ message: "occurredAt cannot be in the future" });
+  }
+
   try {
     const event = await createEvent(req.params.petId, {
       type,
