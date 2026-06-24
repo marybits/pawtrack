@@ -1,0 +1,23 @@
+{
+  "name": "pawtrack-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PawTrack API server (Express 5 + Mongoose + Gemini structured output)",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.3.0",
+    "mongoose": "^9.7.1"
+  }
+}
