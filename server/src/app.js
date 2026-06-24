@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 import usersRouter from "./routes/users.js";
 import petsRouter from "./routes/pets.js";
+import eventsRouter from "./routes/events.js";
 import { requireAuth } from "./middleware/auth.js";
+import { requirePetOwnership } from "./middleware/requirePetOwnership.js";
 
 const app = express();
 
@@ -19,6 +21,9 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/users", usersRouter);
+// Events route must be mounted before /api/pets so the more specific path
+// (/api/pets/:petId/events) is matched before the general /api/pets prefix.
+app.use("/api/pets/:petId/events", requireAuth, requirePetOwnership, eventsRouter);
 app.use("/api/pets", petsRouter);
 
 // ── Protected routes ───────────────────────────────────────────────────────
