@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import usersRouter from "./routes/users.js";
 import petsRouter from "./routes/pets.js";
 import eventsRouter from "./routes/events.js";
+import prescriptionsRouter from "./routes/prescriptions.js";
 import parseRouter from "./routes/parse.js";
 import { requireAuth } from "./middleware/auth.js";
 import { requirePetOwnership } from "./middleware/requirePetOwnership.js";
@@ -51,7 +52,8 @@ app.use("/api/users", usersRouter);
 // Events route must be mounted before /api/pets so the more specific path
 // (/api/pets/:petId/events) is matched before the general /api/pets prefix.
 app.use("/api/events/parse", parseLimiter, requireAuth, parseRouter);
-app.use("/api/pets/:petId/events", requireAuth, requirePetOwnership, eventsRouter);
+app.use("/api/pets/:petId/events",         requireAuth, requirePetOwnership, eventsRouter);
+app.use("/api/pets/:petId/prescriptions",  requireAuth, requirePetOwnership, prescriptionsRouter);
 app.use("/api/pets", petsRouter);
 
 // ── Protected routes ───────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle, Sparkles, List, SlidersHorizontal, X } from "lucide-react";
 import { getPets } from "../api/pets.js";
 import { logEvent, getEvents } from "../api/events.js";
+import { getPrescriptions } from "../api/prescriptions.js";
 import NLEventInput from "../components/NLEventInput.jsx";
 import EventPreviewCard from "../components/EventPreviewCard.jsx";
 
@@ -159,6 +160,7 @@ export default function Log() {
   const [events, setEvents]         = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [prescriptions, setPrescriptions] = useState([]);
 
   // ── Filter state ──────────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false);
@@ -184,6 +186,14 @@ export default function Log() {
       .catch(console.error)
       .finally(() => setPetsLoading(false));
   }, []);
+
+  // Fetch active prescriptions whenever the selected pet changes
+  useEffect(() => {
+    if (!selectedPetId) { setPrescriptions([]); return; }
+    getPrescriptions(selectedPetId, { activeOnly: true })
+      .then(setPrescriptions)
+      .catch(console.error);
+  }, [selectedPetId]);
 
   // Load events when pet, filters, or refreshKey changes
   useEffect(() => {
@@ -419,6 +429,37 @@ export default function Log() {
                   <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
                     Details
                   </p>
+
+                  {/* Prescription quick-select — only shown when logging medication */}
+                  {eventType === "medication" && prescriptions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {prescriptions.map((rx) => {
+                        const active = details.name === rx.medicationName;
+                        return (
+                          <button
+                            key={rx._id}
+                            type="button"
+                            onClick={() =>
+                              setDetails((d) => ({
+                                ...d,
+                                name: rx.medicationName,
+                                ...(rx.dose     != null ? { dose: rx.dose }         : {}),
+                                ...(rx.doseUnit         ? { unit: rx.doseUnit }     : {}),
+                              }))
+                            }
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                              active
+                                ? "bg-rose-700 text-white border-rose-700"
+                                : "bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400"
+                            }`}
+                          >
+                            {rx.medicationName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <DetailFields type={eventType} details={details} onChange={setDetails} />
                 </section>
               )}
