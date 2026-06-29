@@ -1,0 +1,46 @@
+import { parseEventFromText } from "../services/geminiService.js";
+
+/**
+ * POST /api/events/parse
+ * Body: { text: string, petName?: string }
+ *
+ * Calls Gemini to extract a structured event from plain text.
+ * Returns the preview object — nothing is saved to the database here.
+ * The client shows the preview, lets the user edit it, then calls
+ * POST /api/pets/:petId/events to actually persist the confirmed event.
+ */
+export async function parseEvent(req, res) {
+  const { text, petName, timezone } = req.body;
+
+  if (!text || typeof text !== "string" || !text.trim()) {
+    return res.status(400).json({ message: "text is required" });
+  }
+
+  if (text.trim().length > 500) {
+    return res.status(400).json({ message: "text must be 500 characters or fewer" });
+  }
+
+  // Sanitize timezone — must be a plausible IANA string.
+  const safeTz = (typeof timezone === "string" && /^[\w+\-\/]{1,50}$/.test(timezone))
+    ? timezone
+    : undefined;
+
+  // Sanitize petName — short string only, never lands verbatim in the Gemini prompt unsanitized.
+  const safePetName = (typeof petName === "string" && petName.trim().length <= 50)
+    ? petName.trim()
+    : undefined;
+
+  if (!process.env.GEMINI_API_KEY) {
+    return res.status(503).json({ message: "AI parsing is not configured on this server." });
+  }
+
+  try {
+    const preview = await parseEventFromText(text.trim(), safePetName, safeTz);
+    return res.status(200).json(preview);
+  } catch (err) {
+    console.error("[gemini] parse error:", err.message);
+    return res.status(502).json({
+      message: "AI parsing failed — try rephrasing or use the structured form.",
+    });
+  }
+}

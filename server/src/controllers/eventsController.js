@@ -27,7 +27,7 @@ export async function logEvent(req, res) {
     });
     return res.status(201).json(event);
   } catch (err) {
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -44,6 +44,6 @@ export async function listEvents(req, res) {
     const events = await findEventsByPet(req.params.petId, { type, from, to });
     return res.status(200).json(events);
   } catch (err) {
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }

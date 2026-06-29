@@ -6,6 +6,16 @@ export const logEvent = (petId, data) =>
     body: JSON.stringify(data),
   });
 
+export const parseEvent = (text, petName) =>
+  apiFetch("/api/events/parse", {
+    method: "POST",
+    body: JSON.stringify({
+      text,
+      petName,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }),
+  });
+
 export const getEvents = (petId, params = {}) => {
   const qs = new URLSearchParams(
     Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== ""))

@@ -20,7 +20,7 @@ export async function registerPet(req, res) {
       const message = Object.values(err.errors)[0].message;
       return res.status(400).json({ message });
     }
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -29,7 +29,7 @@ export async function listPets(req, res) {
     const pets = await findPetsByOwner(req.userId);
     return res.status(200).json(pets);
   } catch (err) {
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -51,6 +51,6 @@ export async function getPet(req, res) {
     if (err.name === "CastError") {
       return res.status(404).json({ message: "Pet not found" });
     }
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }

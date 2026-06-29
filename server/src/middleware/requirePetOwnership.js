@@ -27,6 +27,6 @@ export async function requirePetOwnership(req, res, next) {
     if (err.name === "CastError") {
       return res.status(404).json({ message: "Pet not found" });
     }
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
