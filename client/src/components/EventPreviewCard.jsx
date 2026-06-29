@@ -14,27 +14,63 @@ const EVENT_TYPES = Object.keys(TYPE_CONFIG);
 
 function toDateTimeLocal(iso) {
   const d = new Date(iso);
-  // Guard against invalid dates (e.g. Gemini returning a malformed occurredAt).
   if (isNaN(d.getTime())) return toDateTimeLocal(new Date());
   return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 const inputClass =
-  "w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent bg-white";
+  "w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors";
 
 function DetailFields({ type, details, onChange }) {
   function set(field) {
     return (e) => onChange({ ...details, [field]: e.target.value });
   }
   switch (type) {
-    case "meal":
+    case "meal": {
+      const FINISHED_OPTS = [
+        { value: "all",     label: "Finished all" },
+        { value: "partial", label: "Left some"    },
+        { value: "refused", label: "Refused"      },
+      ];
       return (
-        <div className="grid grid-cols-3 gap-2">
-          <input value={details.amount ?? ""} onChange={set("amount")} type="number" min="0" step="0.1" placeholder="Amount" className={inputClass} />
-          <input value={details.unit   ?? ""} onChange={set("unit")}   placeholder="cup / g"    className={inputClass} />
-          <input value={details.food   ?? ""} onChange={set("food")}   placeholder="Food"        className={inputClass} />
+        <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <input value={details.amount ?? ""} onChange={set("amount")} type="number" min="0" step="0.1" placeholder="Amount" className={inputClass} />
+            <input value={details.unit   ?? ""} onChange={set("unit")}   placeholder="cup / g"    className={inputClass} />
+            <input value={details.food   ?? ""} onChange={set("food")}   placeholder="Food"        className={inputClass} />
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-stone-400 shrink-0">Ate:</span>
+            {FINISHED_OPTS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onChange({ ...details, finished: details.finished === value ? undefined : value })}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  details.finished === value
+                    ? "bg-amber-700 text-white border-amber-700"
+                    : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange({ ...details, askedForMore: !details.askedForMore })}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
+              details.askedForMore
+                ? "bg-amber-50 border-amber-300 text-amber-800"
+                : "border-stone-200 text-stone-500 hover:border-stone-400"
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-amber-500" : "bg-stone-300"}`} />
+            Pet asked for more food
+          </button>
         </div>
       );
+    }
     case "medication":
       return (
         <div className="grid grid-cols-3 gap-2">
@@ -94,10 +130,10 @@ function DetailFields({ type, details, onChange }) {
  *   saving    – boolean, disables confirm button while parent is persisting
  */
 export default function EventPreviewCard({ preview, onConfirm, onCancel, saving }) {
-  const [type, setType]           = useState(preview.type);
+  const [type, setType]             = useState(preview.type);
   const [occurredAt, setOccurredAt] = useState(toDateTimeLocal(preview.occurredAt));
-  const [details, setDetails]     = useState(preview.details ?? {});
-  const [notes, setNotes]         = useState(preview.notes ?? "");
+  const [details, setDetails]       = useState(preview.details ?? {});
+  const [notes, setNotes]           = useState(preview.notes ?? "");
 
   function handleTypeChange(newType) {
     setType(newType);
@@ -106,7 +142,6 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
 
   function handleConfirm() {
     const ts = new Date(occurredAt);
-    // Guard: if the user cleared the field, fall back to now.
     const safeOccurredAt = isNaN(ts.getTime()) ? new Date().toISOString() : ts.toISOString();
     onConfirm({
       type,
@@ -119,7 +154,7 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
   const cfg = TYPE_CONFIG[type];
 
   return (
-    <div className="bg-stone-50 rounded-xl border-2 border-stone-300 p-5">
+    <div className="bg-[#FFFCF7] rounded-2xl border border-[#B45309]/25 shadow-sm p-5">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cfg?.dot ?? "bg-stone-400"}`} />
@@ -135,18 +170,19 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
           <div className="grid grid-cols-2 gap-2">
             {EVENT_TYPES.map((t) => {
               const c = TYPE_CONFIG[t];
+              const active = type === t;
               return (
                 <button
                   key={t}
                   type="button"
                   onClick={() => handleTypeChange(t)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
-                    type === t
-                      ? "bg-stone-950 text-white border-stone-950"
-                      : "bg-white text-stone-700 border-stone-200 hover:border-stone-400"
+                    active
+                      ? "bg-[#FEF3C7] border-[#B45309] text-stone-900"
+                      : "bg-[#FAF7F0] text-stone-600 border-stone-200 hover:border-stone-300"
                   }`}
                 >
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${type === t ? "bg-white opacity-80" : c.dot}`} />
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
                   {c.label}
                 </button>
               );
@@ -195,7 +231,7 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1.5 flex-1 justify-center rounded-lg border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+          className="flex items-center gap-1.5 flex-1 justify-center rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors active:scale-[0.98] duration-150"
         >
           <X size={14} /> Cancel
         </button>
@@ -203,7 +239,7 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
           type="button"
           onClick={handleConfirm}
           disabled={saving}
-          className="flex items-center gap-1.5 flex-1 justify-center bg-stone-950 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 flex-1 justify-center bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
         >
           <CheckCircle size={14} />
           {saving ? "Saving…" : "Confirm & Save"}

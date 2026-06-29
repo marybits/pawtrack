@@ -3,6 +3,7 @@ import RequireAuth from "./components/RequireAuth.jsx";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
+import Home from "./pages/Home.jsx";
 import Pets from "./pages/Pets.jsx";
 import Log from "./pages/Log.jsx";
 import Routine from "./pages/Routine.jsx";
@@ -17,6 +18,7 @@ export default function App() {
       {/* Protected — auth check first, then app shell (Layout + BottomNav) */}
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
+          <Route path="/home"    element={<Home />} />
           <Route path="/pets"    element={<Pets />} />
           <Route path="/log"     element={<Log />} />
           <Route path="/routine" element={<Routine />} />
@@ -24,7 +26,7 @@ export default function App() {
       </Route>
 
       {/* Default */}
-      <Route path="*" element={<Navigate to="/pets" replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }

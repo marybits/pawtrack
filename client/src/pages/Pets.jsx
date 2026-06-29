@@ -3,9 +3,9 @@ import { PawPrint, Plus, X, ChevronDown, ChevronUp, Pill } from "lucide-react";
 import { getPets, registerPet } from "../api/pets.js";
 import { getPrescriptions, addPrescription, patchPrescription } from "../api/prescriptions.js";
 
-// ── Shared styles ──────────────────────────────────────────────────────────
+// ── Shared input style ─────────────────────────────────────────────────────
 const inputClass =
-  "w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent";
+  "w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors";
 
 // ── Frequency options ──────────────────────────────────────────────────────
 const FREQ_OPTIONS = [
@@ -21,15 +21,19 @@ function intervalLabel(h) {
   return opt ? opt.label.toLowerCase() : `every ${Math.round(h / 24)} days`;
 }
 
+// ── Pet avatar — brand amber, consistent across all pets ──────────────────
+const PET_ACCENT = { bg: "bg-[#FEF3C7]", text: "text-[#B45309]" };
+function petAccent() { return PET_ACCENT; }
+
 // ── Skeleton ───────────────────────────────────────────────────────────────
 function PetSkeleton() {
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4 animate-pulse">
+    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-4 animate-pulse shadow-sm">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-stone-100" />
+        <div className="w-10 h-10 rounded-xl bg-stone-100" />
         <div className="flex-1 space-y-2">
-          <div className="h-3 bg-stone-100 rounded w-1/3" />
-          <div className="h-2.5 bg-stone-100 rounded w-1/4" />
+          <div className="h-3 bg-stone-100 rounded-full w-1/3" />
+          <div className="h-2.5 bg-stone-100 rounded-full w-1/4" />
         </div>
       </div>
     </div>
@@ -37,11 +41,14 @@ function PetSkeleton() {
 }
 
 // ── Add-prescription form ──────────────────────────────────────────────────
-const EMPTY_RX = { medicationName: "", intervalHours: 24, dose: "", doseUnit: "", startDate: "", endDate: "", notes: "" };
+const EMPTY_RX = {
+  medicationName: "", intervalHours: 24,
+  dose: "", doseUnit: "", startDate: "", endDate: "", notes: "",
+};
 
 function AddRxForm({ petId, onSuccess, onCancel }) {
-  const [form, setForm] = useState(EMPTY_RX);
-  const [error, setError] = useState("");
+  const [form, setForm]     = useState(EMPTY_RX);
+  const [error, setError]   = useState("");
   const [loading, setLoading] = useState(false);
 
   function set(field) {
@@ -76,7 +83,6 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
     }
   }
 
-  // Default start date to today for the date input
   const todayISO = new Date().toISOString().slice(0, 10);
 
   return (
@@ -84,7 +90,9 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
       onSubmit={handleSubmit}
       className="mt-3 pt-3 border-t border-stone-100 flex flex-col gap-3"
     >
-      <p className="text-xs font-semibold text-stone-700">New prescription</p>
+      <p className="text-xs font-semibold text-[#B45309] flex items-center gap-1.5">
+        <Pill size={11} /> New prescription
+      </p>
 
       <input
         required
@@ -100,9 +108,7 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
             Dose <span className="text-stone-300">(optional)</span>
           </label>
           <input
-            type="number"
-            min="0"
-            step="0.1"
+            type="number" min="0" step="0.1"
             value={form.dose}
             onChange={set("dose")}
             placeholder="e.g. 250"
@@ -129,9 +135,7 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
             className={inputClass}
           >
             {FREQ_OPTIONS.map((o) => (
-              <option key={o.hours} value={o.hours}>
-                {o.label}
-              </option>
+              <option key={o.hours} value={o.hours}>{o.label}</option>
             ))}
           </select>
         </div>
@@ -149,7 +153,7 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="block text-xs text-stone-500 mb-1">
-            End date <span className="text-stone-300">(leave blank if ongoing)</span>
+            End date <span className="text-stone-300">(or leave blank)</span>
           </label>
           <input
             type="date"
@@ -171,7 +175,7 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
       </div>
 
       {error && (
-        <p className="text-xs text-rose-600 bg-rose-50 rounded-lg px-3 py-2 border border-rose-200">
+        <p className="text-xs text-rose-600 bg-rose-50 rounded-xl px-3 py-2 border border-rose-200">
           {error}
         </p>
       )}
@@ -180,14 +184,14 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+          className="flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors active:scale-[0.98] duration-150"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-stone-950 text-white rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50"
+          className="flex-1 bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-3 py-2 text-sm font-medium transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
         >
           {loading ? "Saving…" : "Save"}
         </button>
@@ -206,7 +210,7 @@ function RxRow({ petId, rx, onDeactivated }) {
       await patchPrescription(petId, rx._id, { active: false });
       onDeactivated(rx._id);
     } catch {
-      // silently ignore for now
+      // silently ignore
     } finally {
       setLoading(false);
     }
@@ -221,35 +225,40 @@ function RxRow({ petId, rx, onDeactivated }) {
 
   return (
     <div className="flex items-start justify-between gap-2 py-2">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-stone-800 truncate">{rx.medicationName}</p>
-        <p className="text-xs text-stone-400">
-          {[
-            intervalLabel(rx.intervalHours),
-            rx.dose != null ? `${rx.dose}${rx.doseUnit ? " " + rx.doseUnit : ""}` : null,
-            dateRange,
-            rx.notes || null,
-          ].filter(Boolean).join(" · ")}
-        </p>
+      <div className="min-w-0 flex items-start gap-2">
+        <Pill size={13} strokeWidth={1.5} className="text-[#B45309] shrink-0 mt-0.5" />
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-stone-800 truncate">{rx.medicationName}</p>
+          <p className="text-xs text-stone-400">
+            {[
+              intervalLabel(rx.intervalHours),
+              rx.dose != null ? `${rx.dose}${rx.doseUnit ? " " + rx.doseUnit : ""}` : null,
+              dateRange,
+              rx.notes || null,
+            ].filter(Boolean).join(" · ")}
+          </p>
+        </div>
       </div>
       <button
         onClick={deactivate}
         disabled={loading}
         title="Deactivate"
-        className="shrink-0 text-xs text-stone-400 hover:text-rose-500 transition-colors disabled:opacity-40 mt-0.5"
+        className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-stone-300 hover:text-rose-400 hover:bg-rose-50 transition-colors disabled:opacity-40 mt-0.5"
       >
-        {loading ? "…" : <X size={14} />}
+        {loading ? <span className="text-xs">…</span> : <X size={13} />}
       </button>
     </div>
   );
 }
 
-// ── Pet card with prescription section ────────────────────────────────────
+// ── Pet card ───────────────────────────────────────────────────────────────
 function PetCard({ pet }) {
   const [showRx, setShowRx]       = useState(false);
   const [rxList, setRxList]       = useState([]);
   const [rxLoading, setRxLoading] = useState(false);
   const [showForm, setShowForm]   = useState(false);
+
+  const accent = petAccent(pet.name);
 
   useEffect(() => {
     if (!showRx) return;
@@ -270,46 +279,57 @@ function PetCard({ pet }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4">
-      {/* Pet info */}
+    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+
+      {/* ── Pet identity ──────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center shrink-0">
-          <PawPrint size={16} strokeWidth={1.5} className="text-stone-500" />
+        <div className={`w-12 h-12 rounded-2xl ${accent.bg} flex items-center justify-center shrink-0`}>
+          <PawPrint size={22} strokeWidth={1.75} className={accent.text} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-stone-950 truncate">{pet.name}</p>
+          <p className="text-base font-bold text-stone-950 truncate">{pet.name}</p>
           <p className="text-xs text-stone-400 capitalize truncate">
-            {pet.species}
-            {pet.breed ? ` · ${pet.breed}` : ""}
+            {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
           </p>
         </div>
       </div>
 
+      {/* ── Stat pills ────────────────────────────────────────────────────── */}
       {(pet.age != null || pet.weight != null) && (
-        <div className="mt-3 flex gap-4 text-xs text-stone-500 border-t border-stone-100 pt-3">
-          {pet.age    != null && <span>{pet.age} yr</span>}
-          {pet.weight != null && <span>{pet.weight} kg</span>}
+        <div className="mt-3 flex gap-2 border-t border-stone-100 pt-3">
+          {pet.age    != null && (
+            <span className="bg-stone-100 text-stone-600 rounded-full px-2.5 py-0.5 text-xs font-medium">
+              {pet.age} yr
+            </span>
+          )}
+          {pet.weight != null && (
+            <span className="bg-stone-100 text-stone-600 rounded-full px-2.5 py-0.5 text-xs font-medium">
+              {pet.weight} kg
+            </span>
+          )}
         </div>
       )}
 
-      {/* Prescriptions toggle */}
+      {/* ── Prescriptions toggle ──────────────────────────────────────────── */}
       <button
         onClick={() => setShowRx((v) => !v)}
-        className="mt-3 w-full flex items-center justify-between text-xs font-medium text-stone-500 hover:text-stone-800 border-t border-stone-100 pt-3 transition-colors"
+        className="mt-3 w-full flex items-center justify-between border-t border-stone-100 pt-3 transition-colors group"
       >
-        <span className="flex items-center gap-1.5">
-          <Pill size={12} />
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-[#B45309] group-hover:text-[#92400E] transition-colors">
+          <Pill size={12} strokeWidth={1.75} />
           Prescriptions
         </span>
-        {showRx ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        <span className="text-stone-300 group-hover:text-stone-500 transition-colors">
+          {showRx ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </span>
       </button>
 
       {showRx && (
-        <div>
+        <div className="mt-1">
           {rxLoading ? (
-            <p className="text-xs text-stone-400 py-2">Loading…</p>
+            <p className="text-xs text-stone-400 py-2 pl-1">Loading…</p>
           ) : rxList.length === 0 && !showForm ? (
-            <p className="text-xs text-stone-400 py-2">No active prescriptions.</p>
+            <p className="text-xs text-stone-400 py-2 pl-1">No active prescriptions.</p>
           ) : (
             <div className="divide-y divide-stone-100">
               {rxList.map((rx) => (
@@ -332,7 +352,7 @@ function PetCard({ pet }) {
           ) : (
             <button
               onClick={() => setShowForm(true)}
-              className="mt-2 flex items-center gap-1 text-xs text-stone-500 hover:text-stone-900 transition-colors"
+              className="mt-1.5 flex items-center gap-1 text-xs font-medium text-stone-400 hover:text-[#B45309] transition-colors"
             >
               <Plus size={12} /> Add prescription
             </button>
@@ -347,8 +367,8 @@ function PetCard({ pet }) {
 const EMPTY_PET = { name: "", species: "", breed: "", age: "", weight: "" };
 
 function RegisterForm({ onSuccess, onCancel }) {
-  const [form, setForm]     = useState(EMPTY_PET);
-  const [error, setError]   = useState("");
+  const [form, setForm]       = useState(EMPTY_PET);
+  const [error, setError]     = useState("");
   const [loading, setLoading] = useState(false);
 
   function set(field) {
@@ -378,19 +398,20 @@ function RegisterForm({ onSuccess, onCancel }) {
   }
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-5">
+    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-stone-950 mb-4">Register a pet</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-stone-600 mb-1.5">
-              Name <span className="text-rose-500">*</span>
+              Name <span className="text-rose-400">*</span>
             </label>
             <input required value={form.name} onChange={set("name")} placeholder="Sophia" className={inputClass} />
           </div>
           <div>
             <label className="block text-xs font-medium text-stone-600 mb-1.5">
-              Species <span className="text-rose-500">*</span>
+              Species <span className="text-rose-400">*</span>
             </label>
             <input required value={form.species} onChange={set("species")} placeholder="cat" className={inputClass} />
           </div>
@@ -415,7 +436,7 @@ function RegisterForm({ onSuccess, onCancel }) {
         </div>
 
         {error && (
-          <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+          <div className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
             {error}
           </div>
         )}
@@ -424,18 +445,19 @@ function RegisterForm({ onSuccess, onCancel }) {
           <button
             type="button"
             onClick={onCancel}
-            className="flex-1 rounded-lg border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+            className="flex-1 rounded-xl border border-stone-200 px-4 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors active:scale-[0.98] duration-150"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-stone-950 text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-50"
+            className="flex-1 bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
           >
             {loading ? "Saving…" : "Add pet"}
           </button>
         </div>
+
       </form>
     </div>
   );
@@ -443,8 +465,8 @@ function RegisterForm({ onSuccess, onCancel }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────
 export default function Pets() {
-  const [pets, setPets]     = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [pets, setPets]         = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
@@ -461,23 +483,37 @@ export default function Pets() {
 
   return (
     <div>
+      {/* ── Page header ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-stone-950 tracking-tight">Your Pets</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-stone-950 tracking-tight">Your Pets</h1>
+          {!loading && pets.length > 0 && (
+            <p className="text-xs text-stone-400 mt-0.5">
+              {pets.length} {pets.length === 1 ? "pet" : "pets"} registered
+            </p>
+          )}
+        </div>
         <button
           onClick={() => setShowForm((v) => !v)}
           aria-label={showForm ? "Cancel" : "Add pet"}
-          className="w-9 h-9 rounded-full bg-stone-950 text-white flex items-center justify-center hover:bg-stone-800 transition-colors shadow-sm"
+          className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors active:scale-[0.96] duration-150 shadow-sm ${
+            showForm
+              ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              : "bg-[#B45309] text-white hover:bg-[#92400E]"
+          }`}
         >
           {showForm ? <X size={16} strokeWidth={2} /> : <Plus size={16} strokeWidth={2} />}
         </button>
       </div>
 
+      {/* ── Register form ───────────────────────────────────────────────── */}
       {showForm && (
         <div className="mb-4">
           <RegisterForm onSuccess={handlePetAdded} onCancel={() => setShowForm(false)} />
         </div>
       )}
 
+      {/* ── List ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-3">
         {loading ? (
           <>
@@ -486,11 +522,13 @@ export default function Pets() {
           </>
         ) : pets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-14 h-14 rounded-full bg-stone-100 flex items-center justify-center mb-4">
-              <PawPrint size={28} strokeWidth={1.5} className="text-stone-400" />
+            <div className="w-14 h-14 rounded-2xl bg-[#FEF3C7] flex items-center justify-center mb-4">
+              <PawPrint size={26} strokeWidth={1.5} className="text-[#B45309]" />
             </div>
             <p className="text-stone-500 text-sm leading-relaxed">
-              No pets yet — tap <strong className="text-stone-700">+</strong> to register your first pet.
+              No pets yet — tap{" "}
+              <strong className="text-stone-700">+</strong>{" "}
+              to register your first pet.
             </p>
           </div>
         ) : (

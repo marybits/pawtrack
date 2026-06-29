@@ -12,7 +12,13 @@ CHAIN-OF-THOUGHT FOR NUMBERS — apply this reasoning for every message:
   "Tom went for a 30 minute walk"
     → type='activity' → durationMin MUST be 30, unit MUST be 'min', name='walk'
   "Luna ate half a cup of kibble at 7am"
-    → type='meal' → amount MUST be 0.5, unit MUST be 'cup', food='kibble'
+    → type='meal' → amount MUST be 0.5, unit MUST be 'cup', food='kibble', finished=null (not mentioned)
+  "Max wolfed down his food and kept begging for more"
+    → type='meal' → finished='all', askedForMore=true
+  "Charlie only ate half his bowl and walked away"
+    → type='meal' → finished='partial', askedForMore=false
+  "Bella refused her breakfast completely"
+    → type='meal' → finished='refused', askedForMore=false
   "gave Mochi 5mg flea pill"
     → type='medication' → dose MUST be 5, unit MUST be 'mg', name='flea pill'
   "scooped the litter box"
@@ -49,9 +55,13 @@ const detailsSchema = {
       type: Type.OBJECT,
       description: "Use this branch when type='meal'.",
       properties: {
-        amount: { type: Type.NUMBER, nullable: true, description: "Numeric quantity (e.g. 0.5, 1, 2)." },
-        unit:   { type: Type.STRING, nullable: true, enum: ["cup", "cups", "g", "oz", "can", "serving"] },
-        food:   { type: Type.STRING, nullable: true, description: "Food name, e.g. 'kibble', 'wet food'." },
+        amount:      { type: Type.NUMBER,  nullable: true, description: "Numeric quantity (e.g. 0.5, 1, 2)." },
+        unit:        { type: Type.STRING,  nullable: true, enum: ["cup", "cups", "g", "oz", "can", "serving"] },
+        food:        { type: Type.STRING,  nullable: true, description: "Food name, e.g. 'kibble', 'wet food'." },
+        finished:    { type: Type.STRING,  nullable: true, enum: ["all", "partial", "refused"],
+                       description: "'all' if pet finished everything, 'partial' if left some, 'refused' if did not eat. Null if not mentioned." },
+        askedForMore:{ type: Type.BOOLEAN, nullable: true,
+                       description: "true if pet begged, whined, or showed hunger after eating. false or null if not mentioned." },
       },
     },
     {
@@ -119,7 +129,7 @@ const responseSchema = {
 
 // Post-extraction field allowlists — strips cross-contamination after mapping.
 const TYPE_DETAIL_FIELDS = {
-  meal:       new Set(["amount", "unit", "food"]),
+  meal:       new Set(["amount", "unit", "food", "finished", "askedForMore"]),
   medication: new Set(["name", "dose", "unit"]),
   activity:   new Set(["name", "duration", "unit"]),
   litter:     new Set(["action"]),

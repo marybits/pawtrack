@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export const EVENT_TYPES = ["meal", "medication", "activity", "litter", "poop", "treats"];
+export const EVENT_TYPES = ["meal", "medication", "activity", "litter", "poop", "treats", "weight"];
 
 const eventSchema = new mongoose.Schema(
   {
