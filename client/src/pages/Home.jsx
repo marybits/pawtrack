@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   PawPrint, Flame, Utensils, Activity, Pill, Plus,
-  ChevronRight, Calendar, Stethoscope, Scissors, Zap,
+  ChevronRight, Calendar, Stethoscope, Scissors, Zap, ArrowRight,
 } from "lucide-react";
 import { useAuth } from "../context/AuthProvider.jsx";
 import { getPets } from "../api/pets.js";
@@ -84,7 +84,7 @@ function StatusPill({ Icon, label, warn = false }) {
   );
 }
 
-function PetCard({ pet, events, prescriptions, onLog }) {
+function PetCard({ pet, events, prescriptions, onLog, onView }) {
   const sorted = (type) =>
     [...events]
       .filter((e) => e.type === type)
@@ -117,8 +117,11 @@ function PetCard({ pet, events, prescriptions, onLog }) {
 
   return (
     <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4">
-      {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-3">
+      {/* ── Header — tappable → profile ──────────────────────────────────── */}
+      <button
+        onClick={() => onView(pet._id)}
+        className="flex items-center justify-between w-full text-left group mb-3"
+      >
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-2xl bg-[#FEF3C7] flex items-center justify-center shrink-0">
             <PawPrint size={20} strokeWidth={1.75} className="text-[#B45309]" />
@@ -131,13 +134,16 @@ function PetCard({ pet, events, prescriptions, onLog }) {
             </p>
           </div>
         </div>
-        {streak > 0 && (
-          <div className="flex items-center gap-1 bg-gradient-to-r from-amber-50 to-[#FFFCF7] border border-amber-200/60 rounded-full px-2.5 py-1">
-            <Flame size={12} className="text-[#B45309]" />
-            <span className="text-xs font-bold text-[#B45309]">{streak}</span>
-          </div>
-        )}
-      </div>
+        <div className="flex items-center gap-2">
+          {streak > 0 && (
+            <div className="flex items-center gap-1 bg-gradient-to-r from-amber-50 to-[#FFFCF7] border border-amber-200/60 rounded-full px-2.5 py-1">
+              <Flame size={12} className="text-[#B45309]" />
+              <span className="text-xs font-bold text-[#B45309]">{streak}</span>
+            </div>
+          )}
+          <ArrowRight size={14} className="text-stone-300 group-hover:text-stone-400 transition-colors" />
+        </div>
+      </button>
 
       {/* ── Status pills ──────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -258,6 +264,10 @@ export default function Home() {
     navigate("/log", { state: { preselectedPetId: petId } });
   }
 
+  function handleViewPet(petId) {
+    navigate(`/pets/${petId}`);
+  }
+
   // Cross-pet today feed
   const todayFeed = [];
   const today = new Date();
@@ -314,6 +324,7 @@ export default function Home() {
               events={petData[pet._id]?.events ?? []}
               prescriptions={petData[pet._id]?.prescriptions ?? []}
               onLog={handleLogForPet}
+              onView={handleViewPet}
             />
           ))}
         </div>

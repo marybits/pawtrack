@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { PawPrint, Plus, X, ChevronDown, ChevronUp, Pill } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { PawPrint, Plus, X, ChevronDown, ChevronUp, Pill, ChevronRight } from "lucide-react";
 import { getPets, registerPet } from "../api/pets.js";
 import { getPrescriptions, addPrescription, patchPrescription } from "../api/prescriptions.js";
 
@@ -253,6 +254,7 @@ function RxRow({ petId, rx, onDeactivated }) {
 
 // ── Pet card ───────────────────────────────────────────────────────────────
 function PetCard({ pet }) {
+  const navigate = useNavigate();
   const [showRx, setShowRx]       = useState(false);
   const [rxList, setRxList]       = useState([]);
   const [rxLoading, setRxLoading] = useState(false);
@@ -281,8 +283,11 @@ function PetCard({ pet }) {
   return (
     <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
 
-      {/* ── Pet identity ──────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3">
+      {/* ── Pet identity — tappable → profile ────────────────────────────── */}
+      <button
+        onClick={() => navigate(`/pets/${pet._id}`)}
+        className="flex items-center gap-3 w-full text-left group"
+      >
         <div className={`w-12 h-12 rounded-2xl ${accent.bg} flex items-center justify-center shrink-0`}>
           <PawPrint size={22} strokeWidth={1.75} className={accent.text} />
         </div>
@@ -292,7 +297,8 @@ function PetCard({ pet }) {
             {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
           </p>
         </div>
-      </div>
+        <ChevronRight size={15} className="text-stone-300 group-hover:text-stone-400 transition-colors shrink-0" />
+      </button>
 
       {/* ── Stat pills ────────────────────────────────────────────────────── */}
       {(pet.age != null || pet.weight != null) && (

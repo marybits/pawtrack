@@ -1,14 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Info, Flame } from "lucide-react";
+import { AlertTriangle, Info, Flame, Sparkles, RefreshCw, CheckCircle } from "lucide-react";
 import {
   AreaChart, Area, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { getPets } from "../api/pets.js";
-import { getEvents } from "../api/events.js";
+import { getPets }         from "../api/pets.js";
+import { getEvents }        from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
+import { fetchInsights }    from "../api/insights.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function isSameLocalDay(a, b) {
@@ -327,6 +328,10 @@ export default function Routine() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading]             = useState(false);
 
+  const [insights, setInsights]               = useState([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsFetched, setInsightsFetched] = useState(false);
+
   useEffect(() => {
     getPets()
       .then((data) => {
@@ -340,6 +345,9 @@ export default function Routine() {
   useEffect(() => {
     if (!selectedPetId) return;
     setLoading(true);
+    // Reset AI insights when switching pets
+    setInsights([]);
+    setInsightsFetched(false);
     Promise.all([
       getEvents(selectedPetId, { from: toISODate(daysAgo(29)) }),
       getPrescriptions(selectedPetId, { activeOnly: true }),
@@ -348,6 +356,22 @@ export default function Routine() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [selectedPetId]);
+
+  async function handleFetchInsights() {
+    if (!selectedPetId || insightsLoading) return;
+    setInsightsLoading(true);
+    try {
+      const data = await fetchInsights(selectedPetId);
+      setInsights(data.insights ?? []);
+      setInsightsFetched(true);
+    } catch (err) {
+      console.error("Insights error:", err);
+      setInsights([]);
+      setInsightsFetched(true);
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
 
   // Derived data
   const activityData = buildActivityData(events);
@@ -451,6 +475,66 @@ export default function Routine() {
 
           {/* ── Health alerts ────────────────────────────────────────────── */}
           {!loading && <AlertsPanel alerts={alerts} />}
+
+          {/* ── AI health insights ───────────────────────────────────────── */}
+          {!loading && (
+            <section className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] shrink-0" />
+                  <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">AI Health Insights</p>
+                </div>
+                {insightsFetched && !insightsLoading && (
+                  <button
+                    onClick={handleFetchInsights}
+                    className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-[#B45309] transition-colors"
+                  >
+                    <RefreshCw size={11} />
+                    Refresh
+                  </button>
+                )}
+              </div>
+
+              {insightsLoading ? (
+                <div className="flex flex-col gap-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-14 bg-stone-100 rounded-xl animate-pulse" />
+                  ))}
+                  <p className="text-xs text-stone-400 text-center mt-1">Gemini is analyzing 30 days of care data…</p>
+                </div>
+              ) : insightsFetched && insights.length === 0 ? (
+                <p className="text-sm text-stone-400 text-center py-4">No patterns detected yet — log more events to improve accuracy.</p>
+              ) : insightsFetched ? (
+                <div className="flex flex-col gap-2">
+                  {insights.map((ins, i) => {
+                    const styles = {
+                      positive: { wrap: "bg-emerald-50 border-emerald-200/70 text-emerald-900", icon: <CheckCircle size={15} className="mt-0.5 shrink-0 text-emerald-600" /> },
+                      info:     { wrap: "bg-sky-50 border-sky-200/70 text-sky-900",             icon: <Info         size={15} className="mt-0.5 shrink-0 text-sky-500"    /> },
+                      warn:     { wrap: "bg-orange-50 border-orange-200 text-orange-900",       icon: <AlertTriangle size={15} className="mt-0.5 shrink-0 text-orange-500" /> },
+                    };
+                    const s = styles[ins.level] ?? styles.info;
+                    return (
+                      <div key={i} className={`flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${s.wrap}`}>
+                        {s.icon}
+                        <div>
+                          <p className="font-semibold text-[13px] leading-snug mb-0.5">{ins.title}</p>
+                          <p className="text-[12px] leading-snug opacity-80">{ins.text}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <button
+                  onClick={handleFetchInsights}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-50 to-[#FFFCF7] border border-amber-200/60 text-[#B45309] text-sm font-semibold hover:border-amber-300 hover:shadow-sm active:scale-[0.98] transition-all duration-150"
+                >
+                  <Sparkles size={15} strokeWidth={2} />
+                  Analyze {pets.find((p) => p._id === selectedPetId)?.name ?? "pet"}'s health patterns
+                </button>
+              )}
+            </section>
+          )}
 
           {/* ── Activity trend ────────────────────────────────────────────── */}
           <SectionCard
