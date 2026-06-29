@@ -26,7 +26,15 @@ export async function findEventsByPet(petId, { type, from, to } = {}) {
   if (from || to) {
     filter.occurredAt = {};
     if (from) filter.occurredAt.$gte = new Date(from);
-    if (to)   filter.occurredAt.$lte = new Date(to);
+    if (to) {
+      // If `to` is a date-only string (YYYY-MM-DD), extend to end of that day
+      // so events logged during the day are included.
+      const toDate = new Date(to);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+        toDate.setUTCHours(23, 59, 59, 999);
+      }
+      filter.occurredAt.$lte = toDate;
+    }
   }
 
   return Event.find(filter).sort({ occurredAt: -1 });
