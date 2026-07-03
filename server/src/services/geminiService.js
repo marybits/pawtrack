@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const EVENT_TYPES = ["meal", "medication", "activity", "litter", "poop", "treats"];
+const EVENT_TYPES = ["meal", "medication", "activity", "litter", "poop", "treats", "weight"];
 
 // ── System instruction ────────────────────────────────────────────────────────
 const SYSTEM_INSTRUCTION = `\
@@ -23,9 +23,13 @@ CHAIN-OF-THOUGHT FOR NUMBERS — apply this reasoning for every message:
     → type='medication' → dose MUST be 5, unit MUST be 'mg', name='flea pill'
   "scooped the litter box"
     → type='litter' → action='scooped' (no numeric fields)
+  "Tom weighed 4.2 kg today"
+    → type='weight' → weightKg MUST be 4.2, unit='kg'
+  "Bella is 9.5 lbs now"
+    → type='weight' → weightKg MUST be 9.5, unit='lbs'
 
 CRITICAL CONSTRAINTS:
-- NEVER leave durationMin, amount, dose, or quantity null if a number is mentioned in the text.
+- NEVER leave durationMin, amount, dose, quantity, or weightKg null if a number is mentioned in the text.
 - If type='activity' and any duration is mentioned, durationMin MUST contain that number.
 - "occurredAt" must be ISO 8601 UTC. Use the reference time in the prompt as "now".
   Resolve relative phrases ("an hour ago", "this morning") using that reference time.
@@ -98,6 +102,16 @@ const detailsSchema = {
       properties: {
         name:     { type: Type.STRING, nullable: true, description: "Treat name." },
         quantity: { type: Type.NUMBER, nullable: true, description: "Number of treats given." },
+      },
+    },
+    {
+      // ── weight ────────────────────────────────────────────────────────────
+      type: Type.OBJECT,
+      description: "Use this branch when type='weight'. weightKg is REQUIRED — never omit it when a weight is stated.",
+      required: ["weightKg"],
+      properties: {
+        weightKg: { type: Type.NUMBER, description: "The weight value as given (numeric only). '4.2 kg'→4.2, '9.5 lbs'→9.5." },
+        unit:     { type: Type.STRING, nullable: true, enum: ["kg", "lbs"] },
       },
     },
   ],
@@ -192,7 +206,7 @@ export async function parseEventFromText(text, petName, timezone) {
 
   // Clamp occurredAt to now if model produced a future time.
   if (parsed.occurredAt && new Date(parsed.occurredAt) > new Date()) {
-    parsed.occurredAt = now;
+    parsed.occurredAt = nowUtc;
   }
 
   // Map durationMin → duration (client components use "duration").

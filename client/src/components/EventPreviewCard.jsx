@@ -8,6 +8,7 @@ const TYPE_CONFIG = {
   litter:     { label: "Litter",     dot: "bg-stone-400"  },
   poop:       { label: "Poop",       dot: "bg-amber-900"  },
   treats:     { label: "Treats",     dot: "bg-orange-600" },
+  weight:     { label: "Weight",     dot: "bg-sky-600"    },
 };
 
 const EVENT_TYPES = Object.keys(TYPE_CONFIG);
@@ -114,6 +115,16 @@ function DetailFields({ type, details, onChange }) {
         <div className="grid grid-cols-2 gap-2">
           <input value={details.name     ?? ""} onChange={set("name")}     placeholder="Treat name" className={inputClass} />
           <input value={details.quantity ?? ""} onChange={set("quantity")} type="number" min="0" placeholder="Qty" className={inputClass} />
+        </div>
+      );
+    case "weight":
+      return (
+        <div className="grid grid-cols-2 gap-2">
+          <input value={details.weightKg ?? ""} onChange={set("weightKg")} type="number" min="0" step="0.1" placeholder="Weight" className={inputClass} />
+          <select value={details.unit ?? "kg"} onChange={set("unit")} className={inputClass}>
+            <option value="kg">kg</option>
+            <option value="lbs">lbs</option>
+          </select>
         </div>
       );
     default:

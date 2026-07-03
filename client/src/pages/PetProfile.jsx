@@ -319,9 +319,9 @@ export default function PetProfile() {
                   <Pill size={13} className="text-rose-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-stone-800 truncate">{rx.name}</p>
+                  <p className="text-sm font-semibold text-stone-800 truncate">{rx.medicationName}</p>
                   <p className="text-xs text-stone-400">
-                    {rx.dose ? `${rx.dose}${rx.unit ? ` ${rx.unit}` : ""} · ` : ""}
+                    {rx.dose ? `${rx.dose}${rx.doseUnit ? ` ${rx.doseUnit}` : ""} · ` : ""}
                     {intervalLabel(rx.intervalHours)}
                   </p>
                 </div>
