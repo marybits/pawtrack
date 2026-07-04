@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, PawPrint, Flame, Plus, Pill,
   Utensils, Activity, Scissors, Zap, Stethoscope, Calendar,
-  Scale, ChevronRight,
+  Scale, ChevronRight, Camera, Loader2,
 } from "lucide-react";
-import { getPetById } from "../api/pets.js";
+import { getPetById, uploadPetAvatar } from "../api/pets.js";
 import { getEvents } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
 
@@ -98,6 +98,29 @@ const TYPE_META = {
   grooming:   { label: "Grooming",   Icon: Scissors,    dot: "bg-teal-600"   },
 };
 
+function resizeImage(file, maxPx = 256) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(maxPx / img.width, maxPx / img.height, 1);
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function intervalLabel(h) {
   if (h <= 13)  return "twice daily";
   if (h <= 25)  return "once daily";
@@ -151,6 +174,25 @@ export default function PetProfile() {
   const [events, setEvents]             = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading]           = useState(true);
+  const [uploading, setUploading]       = useState(false);
+  const fileInputRef                    = useRef(null);
+
+  async function handleAvatarChange(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const base64 = await resizeImage(file, 256);
+      const updated = await uploadPetAvatar(petId, base64);
+      setPet(updated);
+    } catch (err) {
+      console.error("Avatar upload failed:", err);
+    } finally {
+      setUploading(false);
+      // reset so same file can be re-selected
+      e.target.value = "";
+    }
+  }
 
   useEffect(() => {
     Promise.all([
@@ -234,10 +276,40 @@ export default function PetProfile() {
           <ellipse cx="62" cy="28" rx="9"  ry="7"  fill="#3D3170"/>
         </svg>
 
-        {/* Avatar */}
-        <div className="w-20 h-20 rounded-3xl bg-[#3D3170] flex items-center justify-center mx-auto mb-3 shadow-[0_4px_16px_rgba(61,49,112,0.30)]">
-          <PawPrint size={36} strokeWidth={1.75} className="text-white" />
-        </div>
+        {/* Avatar — tap to change */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="relative w-20 h-20 mx-auto mb-3 group"
+          aria-label="Change pet photo"
+        >
+          {/* Photo or fallback */}
+          <div className="w-20 h-20 rounded-3xl overflow-hidden bg-[#3D3170] flex items-center justify-center shadow-[0_4px_16px_rgba(61,49,112,0.30)]">
+            {pet.avatarUrl ? (
+              <img
+                src={pet.avatarUrl}
+                alt={pet.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <PawPrint size={36} strokeWidth={1.75} className="text-white" />
+            )}
+          </div>
+          {/* Camera badge */}
+          <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white border-2 border-[#F0EEF3] shadow-sm flex items-center justify-center group-hover:bg-[#3D3170] transition-colors">
+            {uploading
+              ? <Loader2 size={13} className="text-[#3D3170] group-hover:text-white animate-spin" />
+              : <Camera size={13} className="text-[#3D3170] group-hover:text-white transition-colors" />
+            }
+          </div>
+        </button>
 
         {/* Name + meta */}
         <h1 className="text-2xl font-bold text-stone-950 tracking-tight">{pet.name}</h1>

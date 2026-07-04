@@ -288,8 +288,11 @@ function PetCard({ pet }) {
         onClick={() => navigate(`/pets/${pet._id}`)}
         className="flex items-center gap-3 w-full text-left group"
       >
-        <div className={`w-12 h-12 rounded-2xl ${accent.bg} flex items-center justify-center shrink-0`}>
-          <PawPrint size={22} strokeWidth={1.75} className={accent.text} />
+        <div className={`w-12 h-12 rounded-2xl ${accent.bg} flex items-center justify-center shrink-0 overflow-hidden`}>
+          {pet.avatarUrl
+            ? <img src={pet.avatarUrl} alt={pet.name} className="w-full h-full object-cover" />
+            : <PawPrint size={22} strokeWidth={1.75} className={accent.text} />
+          }
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-base font-bold text-stone-950 truncate">{pet.name}</p>

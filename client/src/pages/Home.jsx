@@ -124,8 +124,11 @@ function PetCard({ pet, events, prescriptions, onLog, onView }) {
         className="flex items-center justify-between w-full text-left group mb-3"
       >
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-[#F0EEF3] flex items-center justify-center shrink-0">
-            <PawPrint size={20} strokeWidth={1.75} className="text-[#3D3170]" />
+          <div className="w-11 h-11 rounded-2xl bg-[#F0EEF3] flex items-center justify-center shrink-0 overflow-hidden">
+            {pet.avatarUrl
+              ? <img src={pet.avatarUrl} alt={pet.name} className="w-full h-full object-cover" />
+              : <PawPrint size={20} strokeWidth={1.75} className="text-[#3D3170]" />
+            }
           </div>
           <div>
             <p className="text-base font-bold text-stone-950 leading-tight">{pet.name}</p>
