@@ -7,6 +7,7 @@ import petsRouter from "./routes/pets.js";
 import eventsRouter from "./routes/events.js";
 import prescriptionsRouter from "./routes/prescriptions.js";
 import parseRouter from "./routes/parse.js";
+import insightsRouter from "./routes/insights.js";
 import { requireAuth } from "./middleware/auth.js";
 import { requirePetOwnership } from "./middleware/requirePetOwnership.js";
 
@@ -41,6 +42,14 @@ const parseLimiter = rateLimit({
   message: { message: "Too many parse requests — please slow down." },
 });
 
+const insightsLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,              // 5 insight requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many insight requests — please slow down." },
+});
+
 // ── Public routes ──────────────────────────────────────────────────────────
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok" });
@@ -54,6 +63,7 @@ app.use("/api/users", usersRouter);
 app.use("/api/events/parse", parseLimiter, requireAuth, parseRouter);
 app.use("/api/pets/:petId/events",         requireAuth, requirePetOwnership, eventsRouter);
 app.use("/api/pets/:petId/prescriptions",  requireAuth, requirePetOwnership, prescriptionsRouter);
+app.use("/api/pets/:petId/insights",       requireAuth, requirePetOwnership, insightsLimiter, insightsRouter);
 app.use("/api/pets", petsRouter);
 
 // ── Protected routes ───────────────────────────────────────────────────────

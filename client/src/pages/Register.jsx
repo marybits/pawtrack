@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { PawPrint } from "lucide-react";
 import { useAuth } from "../context/AuthProvider.jsx";
 
 export default function Register() {
@@ -27,17 +28,42 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* Heading */}
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold text-stone-950 tracking-tight">PawTrack</h1>
-          <p className="mt-2 text-sm text-stone-500">Create your account</p>
+    <div className="min-h-screen bg-[#F5F4F7] flex items-center justify-center px-4 py-8 relative overflow-hidden">
+
+      {/* ── Decorative paw watermarks ─────────────────────────────────────── */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none select-none" aria-hidden="true">
+        <g fill="#3D3170" opacity="0.045">
+          <ellipse cx="88%" cy="12%" rx="52" ry="42" />
+          <ellipse cx="74%" cy="4%"  rx="20" ry="16" />
+          <ellipse cx="94%" cy="4%"  rx="20" ry="16" />
+          <ellipse cx="78%" cy="-2%" rx="18" ry="14" />
+          <ellipse cx="90%" cy="-2%" rx="18" ry="14" />
+          <ellipse cx="12%" cy="88%" rx="36" ry="30" />
+          <ellipse cx="3%"  cy="78%" rx="14" ry="11" />
+          <ellipse cx="22%" cy="78%" rx="14" ry="11" />
+          <ellipse cx="7%"  cy="73%" rx="13" ry="10" />
+          <ellipse cx="19%" cy="73%" rx="13" ry="10" />
+        </g>
+      </svg>
+
+      <div className="w-full max-w-sm relative z-10">
+
+        {/* ── Brand moment ──────────────────────────────────────────────────── */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-20 h-20 rounded-3xl bg-[#3D3170] flex items-center justify-center shadow-[0_4px_20px_rgba(61,49,112,0.30)] mb-4">
+            <PawPrint size={36} strokeWidth={1.75} className="text-white" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="text-[#3D3170]">Paw</span>
+            <span className="text-stone-900">Track</span>
+          </h1>
+          <p className="mt-1.5 text-sm text-stone-500">Create your account</p>
         </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-xl border border-stone-200 p-6">
+        {/* ── Card ──────────────────────────────────────────────────────────── */}
+        <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+
             <div>
               <label className="block text-sm font-medium text-stone-700 mb-1.5">
                 Username
@@ -49,7 +75,7 @@ export default function Register() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="your_username"
-                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent"
+                className="w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors"
               />
             </div>
 
@@ -64,7 +90,7 @@ export default function Register() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent"
+                className="w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors"
               />
             </div>
 
@@ -79,12 +105,12 @@ export default function Register() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="at least 6 characters"
-                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:border-transparent"
+                className="w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors"
               />
             </div>
 
             {error && (
-              <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+              <div className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
                 {error}
               </div>
             )}
@@ -92,24 +118,27 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 w-full bg-stone-950 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-stone-800 transition-colors disabled:opacity-50"
+              className="mt-1 w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Creating account…" : "Create account"}
             </button>
+
           </form>
         </div>
 
-        {/* Footer */}
-        <p className="mt-4 text-center text-sm text-stone-500">
+        {/* ── Footer ────────────────────────────────────────────────────────── */}
+        <p className="mt-5 text-center text-sm text-stone-500">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="text-stone-900 font-medium underline underline-offset-2"
+            className="text-[#3D3170] font-semibold hover:text-[#2E2454] transition-colors"
           >
             Sign in
           </Link>
         </p>
+
       </div>
     </div>
   );
 }
+

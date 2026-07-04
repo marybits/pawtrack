@@ -1,41 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, Flame, Sparkles, RefreshCw, CheckCircle } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
+  CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
-import { getPets } from "../api/pets.js";
-import { getEvents } from "../api/events.js";
+import { getPets }         from "../api/pets.js";
+import { getEvents }        from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
-
-// ── Design tokens ────────────────────────────────────────────────────────────
-const TYPE_COLORS = {
-  meal:       "#b45309",
-  medication: "#be123c",
-  activity:   "#57534e",
-  litter:     "#a8a29e",
-  poop:       "#78350f",
-  treats:     "#ea580c",
-};
-
-const TYPE_LABELS = {
-  meal:       "Meal",
-  medication: "Medication",
-  activity:   "Activity",
-  litter:     "Litter",
-  poop:       "Poop",
-  treats:     "Treats",
-};
-
-const EVENT_TYPES = Object.keys(TYPE_COLORS);
+import { fetchInsights }    from "../api/insights.js";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function isSameLocalDay(dateA, dateB) {
+function isSameLocalDay(a, b) {
   return (
-    dateA.getFullYear() === dateB.getFullYear() &&
-    dateA.getMonth()    === dateB.getMonth()    &&
-    dateA.getDate()     === dateB.getDate()
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth()    === b.getMonth()    &&
+    a.getDate()     === b.getDate()
   );
 }
 
@@ -50,54 +31,6 @@ function toISODate(d) {
   return d.toISOString().slice(0, 10);
 }
 
-// Build array of 14 day objects for the stacked bar chart.
-function buildBarData(events) {
-  return Array.from({ length: 14 }, (_, i) => {
-    const day = daysAgo(13 - i);
-    const dayEvents = events.filter((ev) =>
-      isSameLocalDay(new Date(ev.occurredAt), day)
-    );
-    const label = day.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const entry = { date: label };
-    EVENT_TYPES.forEach((t) => {
-      entry[t] = dayEvents.filter((ev) => ev.type === t).length;
-    });
-    return entry;
-  });
-}
-
-// Build donut data — only include types with at least 1 event.
-function buildDonutData(events) {
-  return EVENT_TYPES
-    .map((t) => ({
-      name:  TYPE_LABELS[t],
-      value: events.filter((ev) => ev.type === t).length,
-      fill:  TYPE_COLORS[t],
-    }))
-    .filter((d) => d.value > 0);
-}
-
-// Count consecutive days (from today backwards) with at least one event.
-function calcStreak(events) {
-  let streak = 0;
-  for (let i = 0; i < 30; i++) {
-    const day = daysAgo(i);
-    if (events.some((ev) => isSameLocalDay(new Date(ev.occurredAt), day))) {
-      streak++;
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-function topType(events) {
-  if (!events.length) return null;
-  const counts = {};
-  events.forEach((ev) => { counts[ev.type] = (counts[ev.type] ?? 0) + 1; });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-}
-
 function intervalLabel(h) {
   if (h <= 13)  return "twice daily";
   if (h <= 25)  return "once daily";
@@ -107,127 +40,197 @@ function intervalLabel(h) {
   return `every ${Math.round(h / 24)} days`;
 }
 
+// ── Data builders ─────────────────────────────────────────────────────────────
+
+// Activity: daily total minutes over last 14 days
+function buildActivityData(events) {
+  return Array.from({ length: 14 }, (_, i) => {
+    const day = daysAgo(13 - i);
+    const dayEvents = events.filter(
+      (ev) => ev.type === "activity" && isSameLocalDay(new Date(ev.occurredAt), day)
+    );
+    const minutes = dayEvents.reduce((sum, ev) => {
+      const dur  = Number(ev.details?.duration) || 0;
+      const unit = ev.details?.unit || "min";
+      return sum + (unit === "hr" ? dur * 60 : dur);
+    }, 0);
+    return {
+      date: day.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      minutes,
+      sessions: dayEvents.length,
+    };
+  });
+}
+
+// Meal grid: 14-day appetite snapshot
+const MEAL_DOT = {
+  all:     { bg: "bg-emerald-700", label: "Finished all"  },
+  partial: { bg: "bg-amber-600",   label: "Left some"     },
+  refused: { bg: "bg-rose-600",    label: "Refused"       },
+  logged:  { bg: "bg-stone-500",   label: "Logged"        },
+  none:    { bg: "bg-stone-200",   label: "No meal"       },
+};
+
+function buildMealGrid(events) {
+  return Array.from({ length: 14 }, (_, i) => {
+    const day   = daysAgo(13 - i);
+    const meals = events.filter(
+      (ev) => ev.type === "meal" && isSameLocalDay(new Date(ev.occurredAt), day)
+    );
+    const status = meals.length === 0
+      ? "none"
+      : (meals[0].details?.finished ?? "logged");
+    return {
+      day,
+      label:  day.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
+      status,
+      count:  meals.length,
+    };
+  });
+}
+
+// Poop health donut
+const POOP_COLORS = {
+  normal:  "#22c55e",
+  loose:   "#f59e0b",
+  liquid:  "#ef4444",
+  solid:   "#78716c",
+  unknown: "#d1d5db",
+};
+const POOP_LABELS = {
+  normal: "Normal", loose: "Loose", liquid: "Liquid", solid: "Very solid", unknown: "Unknown",
+};
+
+function buildPoopData(events) {
+  const poops = events.filter((ev) => ev.type === "poop");
+  if (poops.length < 2) return null;
+  const counts = {};
+  poops.forEach((ev) => {
+    const c = ev.details?.consistency || "unknown";
+    counts[c] = (counts[c] ?? 0) + 1;
+  });
+  return Object.entries(counts).map(([k, v]) => ({
+    name:  POOP_LABELS[k] ?? k,
+    value: v,
+    fill:  POOP_COLORS[k] ?? "#d1d5db",
+  }));
+}
+
+// Medication adherence per prescription
+function buildMedAdherence(prescriptions, events) {
+  const now = new Date();
+  return prescriptions
+    .filter((rx) => {
+      const start = new Date(rx.startDate);
+      const end   = rx.endDate ? new Date(rx.endDate) : null;
+      return now >= start && (!end || now <= end);
+    })
+    .map((rx) => {
+      const windowStart    = new Date(Math.max(new Date(rx.startDate).getTime(), daysAgo(6).getTime()));
+      const hoursInWindow  = (now - windowStart) / 3_600_000;
+      const expected       = Math.max(1, Math.round(hoursInWindow / rx.intervalHours));
+      const rxName         = rx.medicationName.toLowerCase();
+      const logged         = events.filter(
+        (ev) =>
+          ev.type === "medication" &&
+          (ev.details?.name ?? "").toLowerCase() === rxName &&
+          new Date(ev.occurredAt) >= windowStart
+      ).length;
+      return { name: rx.medicationName, logged, expected, pct: Math.min(1, logged / expected) };
+    });
+}
+
 // ── Health alerts ─────────────────────────────────────────────────────────────
-// Returns an array of { level: "warn"|"info", text: string }.
-// events: last 30 days sorted descending.
-// prescriptions: active prescriptions for this pet.
 function buildAlerts(events, prescriptions = []) {
   if (!events.length && !prescriptions.length) return [];
 
-  const alerts = [];
-  const now = new Date();
+  const alerts  = [];
+  const now     = new Date();
   const hoursAgo = (date) => (now - date) / 3_600_000;
   const dSinceMs = (date) => (now - date) / 86_400_000;
 
-  // ── Event-based checks (only run when there is history) ─────────────────
   if (events.length) {
-    // Last occurrence of a given type (events are sorted desc by occurredAt)
     const lastOf = (type) => {
       const hit = events.find((ev) => ev.type === type);
       return hit ? new Date(hit.occurredAt) : null;
     };
-
     const countInWindow = (type, fromDate, toDate = now) =>
       events.filter((ev) => {
         const d = new Date(ev.occurredAt);
         return ev.type === type && d >= fromDate && d <= toDate;
       }).length;
 
-    // 1. No events at all today
-    const hasToday = events.some((ev) =>
-      isSameLocalDay(new Date(ev.occurredAt), now)
-    );
-    if (!hasToday) {
+    // 1. No events today
+    if (!events.some((ev) => isSameLocalDay(new Date(ev.occurredAt), now))) {
       alerts.push({ level: "warn", text: "No events logged today — streak at risk." });
     }
 
-    // 2. No meal in >24 h (only if meals exist in history)
+    // 2. No meal in >24h
     const lastMeal = lastOf("meal");
-    if (lastMeal) {
-      const h = hoursAgo(lastMeal);
-      if (h > 24) {
-        alerts.push({
-          level: "warn",
-          text: `No meal logged in ${Math.round(h)} hours.`,
-        });
-      }
+    if (lastMeal && hoursAgo(lastMeal) > 24) {
+      alerts.push({ level: "warn", text: `No meal logged in ${Math.round(hoursAgo(lastMeal))} hours.` });
     }
 
-    // 3a. No poop in >2 days (only if poop was ever logged)
+    // 3. Appetite alerts
+    const recentMeals  = events.filter(
+      (ev) => ev.type === "meal" && new Date(ev.occurredAt) >= daysAgo(4)
+    );
+    const refusals = recentMeals.filter((ev) => ev.details?.finished === "refused").length;
+    if (refusals >= 2) {
+      alerts.push({ level: "warn", text: `Pet has refused food ${refusals} times in the last 5 days — consider a vet check.` });
+    }
+    const hungryCount = events.filter(
+      (ev) => ev.type === "meal" && ev.details?.askedForMore === true && new Date(ev.occurredAt) >= daysAgo(6)
+    ).length;
+    if (hungryCount >= 3) {
+      alerts.push({ level: "info", text: `Pet has asked for more food ${hungryCount} times this week — portions may need adjusting.` });
+    }
+
+    // 4. No poop in >2 days
     const lastPoop = lastOf("poop");
-    if (lastPoop) {
-      const d = dSinceMs(lastPoop);
-      if (d > 2) {
-        alerts.push({
-          level: "warn",
-          text: `No poop logged in ${Math.floor(d)} days — could indicate a GI issue.`,
-        });
-      }
+    if (lastPoop && dSinceMs(lastPoop) > 2) {
+      alerts.push({ level: "warn", text: `No poop logged in ${Math.floor(dSinceMs(lastPoop))} days — could indicate a GI issue.` });
     }
 
-    // 3b. Abnormal poop consistency for 2+ events in the last 3 days.
-    const ABNORMAL = ["loose", "liquid", "solid"];
-    const recentWeirdPoops = events.filter((ev) => {
-      if (ev.type !== "poop") return false;
-      return (
-        new Date(ev.occurredAt) >= daysAgo(3) &&
-        ABNORMAL.includes(ev.details?.consistency)
-      );
-    });
-    if (recentWeirdPoops.length >= 2) {
-      const counts = {};
-      recentWeirdPoops.forEach((ev) => {
-        const c = ev.details?.consistency;
-        if (c) counts[c] = (counts[c] ?? 0) + 1;
-      });
+    // 5. Abnormal poop consistency 2+ times in 3 days
+    const ABNORMAL   = ["loose", "liquid", "solid"];
+    const weirdPoops = events.filter(
+      (ev) => ev.type === "poop" && new Date(ev.occurredAt) >= daysAgo(3) && ABNORMAL.includes(ev.details?.consistency)
+    );
+    if (weirdPoops.length >= 2) {
+      const counts   = {};
+      weirdPoops.forEach((ev) => { const c = ev.details?.consistency; if (c) counts[c] = (counts[c] ?? 0) + 1; });
       const dominant = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-      const label = dominant === "solid" ? "very solid" : dominant;
-      alerts.push({
-        level: "warn",
-        text: `Poop has been ${label} for the past few days — worth a vet check if it continues.`,
-      });
+      alerts.push({ level: "warn", text: `Poop has been ${dominant === "solid" ? "very solid" : dominant} for the past few days — worth a vet check if it continues.` });
     }
 
-    // 5. Activity down >50% week-over-week (need ≥3 last week to avoid noise)
+    // 6. Activity drop week-over-week
     const actThis = countInWindow("activity", daysAgo(6));
     const actPrev = countInWindow("activity", daysAgo(13), daysAgo(6));
     if (actPrev >= 3 && actThis < actPrev / 2) {
-      alerts.push({
-        level: "info",
-        text: `Activity down this week: ${actThis} vs ${actPrev} last week.`,
-      });
+      alerts.push({ level: "info", text: `Activity down this week: ${actThis} vs ${actPrev} last week.` });
     }
   }
 
-  // ── Prescription checks (always run — even if no events logged yet) ──────
+  // 7. Prescription overdue
   for (const rx of prescriptions) {
     const start = new Date(rx.startDate);
     const end   = rx.endDate ? new Date(rx.endDate) : null;
+    if (now < start || (end && now > end)) continue;
 
-    // Skip if we're outside the prescribed window
-    if (now < start) continue;
-    if (end && now > end) continue;
-
-    // Find most recent medication event whose name matches (case-insensitive)
-    const rxName = rx.medicationName.toLowerCase();
+    const rxName  = rx.medicationName.toLowerCase();
     const lastLog = events.find(
       (ev) =>
         ev.type === "medication" &&
         (ev.details?.name ?? "").toLowerCase() === rxName &&
         new Date(ev.occurredAt) >= start
     );
-
-    const sinceLastH = lastLog
-      ? hoursAgo(new Date(lastLog.occurredAt))
-      : hoursAgo(start); // use prescription start as baseline if never logged
-
-    if (sinceLastH > rx.intervalHours * 1.5) {
-      const overdueSince = lastLog
-        ? `${Math.round(sinceLastH)}h ago`
-        : "not logged yet";
+    const hoursAgo = (date) => (now - date) / 3_600_000;
+    const sinceH   = lastLog ? hoursAgo(new Date(lastLog.occurredAt)) : hoursAgo(start);
+    if (sinceH > rx.intervalHours * 1.5) {
       alerts.push({
         level: "warn",
-        text: `${rx.medicationName} is overdue — prescribed ${intervalLabel(rx.intervalHours)}, last logged ${overdueSince}.`,
+        text:  `${rx.medicationName} is overdue — prescribed ${intervalLabel(rx.intervalHours)}, last logged ${lastLog ? `${Math.round(sinceH)}h ago` : "not logged yet"}.`,
       });
     }
   }
@@ -235,25 +238,53 @@ function buildAlerts(events, prescriptions = []) {
   return alerts;
 }
 
-// ── Alerts panel ─────────────────────────────────────────────────────────────
+// Weight trend: all weight events sorted chronologically
+function buildWeightData(events) {
+  return events
+    .filter((ev) => ev.type === "weight" && ev.details?.weightKg != null)
+    .map((ev) => ({
+      date: new Date(ev.occurredAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      kg:   Number(ev.details.weightKg),
+      ts:   new Date(ev.occurredAt).getTime(),
+    }))
+    .sort((a, b) => a.ts - b.ts);
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+function Skeleton({ className }) {
+  return <div className={`bg-stone-100 rounded-2xl animate-pulse ${className}`} />;
+}
+
+function SectionCard({ title, children, empty, emptyText }) {
+  return (
+    <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_4px_12px_rgba(61,49,112,0.06)] hover:shadow-[0_4px_20px_rgba(61,49,112,0.10)] transition-shadow duration-200 p-4 mb-4">
+      <div className="flex items-center gap-2 mb-4">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+        <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">{title}</p>
+      </div>
+      {empty ? (
+        <p className="text-sm text-stone-400 text-center py-6">{emptyText ?? "Not enough data yet."}</p>
+      ) : children}
+    </section>
+  );
+}
+
 function AlertsPanel({ alerts }) {
   if (!alerts.length) return null;
   return (
-    <section className="mb-6 flex flex-col gap-2">
+    <section className="mb-4 flex flex-col gap-2">
       {alerts.map((a, i) => (
         <div
           key={i}
           className={`flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${
             a.level === "warn"
-              ? "bg-amber-50 border-amber-200 text-amber-800"
-              : "bg-stone-50 border-stone-200 text-stone-600"
+              ? "bg-orange-50 border-orange-200 text-orange-900"
+              : "bg-sky-50 border-sky-200 text-sky-900"
           }`}
         >
-          {a.level === "warn" ? (
-            <AlertTriangle size={15} className="mt-0.5 shrink-0 text-amber-500" />
-          ) : (
-            <Info size={15} className="mt-0.5 shrink-0 text-stone-400" />
-          )}
+          {a.level === "warn"
+            ? <AlertTriangle size={15} className="mt-0.5 shrink-0 text-orange-500" />
+            : <Info          size={15} className="mt-0.5 shrink-0 text-sky-500"   />}
           <span>{a.text}</span>
         </div>
       ))}
@@ -261,43 +292,46 @@ function AlertsPanel({ alerts }) {
   );
 }
 
-// ── Custom tooltip for bar chart ─────────────────────────────────────────────
-function BarTooltip({ active, payload, label }) {
+// Weight tooltip
+function WeightTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
-  const total = payload.reduce((s, p) => s + (p.value || 0), 0);
-  if (!total) return null;
   return (
-    <div className="bg-white border border-stone-200 rounded-xl shadow-sm px-3 py-2 text-xs">
-      <p className="font-semibold text-stone-700 mb-1">{label}</p>
-      {payload.filter((p) => p.value > 0).map((p) => (
-        <div key={p.dataKey} className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ background: p.fill }} />
-          <span className="text-stone-600">{TYPE_LABELS[p.dataKey]}: {p.value}</span>
-        </div>
-      ))}
-      <p className="text-stone-400 mt-1 border-t border-stone-100 pt-1">Total: {total}</p>
+    <div className="bg-[#FFFFFF] border border-stone-200/60 rounded-xl shadow-sm px-3 py-2 text-xs">
+      <p className="font-semibold text-stone-700 mb-0.5">{label}</p>
+      <p className="text-[#3D3170] font-bold">{payload[0]?.value} kg</p>
     </div>
   );
 }
 
-// ── Skeleton ─────────────────────────────────────────────────────────────────
-function Skeleton({ className }) {
-  return <div className={`bg-stone-100 rounded-xl animate-pulse ${className}`} />;
+// Activity tooltip
+function ActivityTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  const { minutes, sessions } = payload[0]?.payload ?? {};
+  if (!minutes && !sessions) return null;
+  return (
+    <div className="bg-[#FFFFFF] border border-stone-200/60 rounded-xl shadow-sm px-3 py-2 text-xs">
+      <p className="font-semibold text-stone-700 mb-1">{label}</p>
+      <p className="text-stone-500">{minutes} min · {sessions} session{sessions !== 1 ? "s" : ""}</p>
+    </div>
+  );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Routine() {
   const navigate = useNavigate();
 
-  const [pets, setPets]                     = useState([]);
-  const [petsLoading, setPetsLoading]       = useState(true);
-  const [selectedPetId, setSelectedPetId]   = useState(null);
+  const [pets, setPets]                   = useState([]);
+  const [petsLoading, setPetsLoading]     = useState(true);
+  const [selectedPetId, setSelectedPetId] = useState(null);
 
-  const [events, setEvents]                       = useState([]);
-  const [eventsLoading, setEventsLoading]         = useState(false);
-  const [prescriptions, setPrescriptions]         = useState([]);
+  const [events, setEvents]               = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading]             = useState(false);
 
-  // Load pets once
+  const [insights, setInsights]               = useState([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsFetched, setInsightsFetched] = useState(false);
+
   useEffect(() => {
     getPets()
       .then((data) => {
@@ -308,43 +342,65 @@ export default function Routine() {
       .finally(() => setPetsLoading(false));
   }, []);
 
-  // Load last 30 days of events + active prescriptions whenever the pet changes
   useEffect(() => {
     if (!selectedPetId) return;
-    setEventsLoading(true);
+    setLoading(true);
+    // Reset AI insights when switching pets
+    setInsights([]);
+    setInsightsFetched(false);
     Promise.all([
       getEvents(selectedPetId, { from: toISODate(daysAgo(29)) }),
       getPrescriptions(selectedPetId, { activeOnly: true }),
     ])
-      .then(([evs, rxs]) => {
-        setEvents(evs);
-        setPrescriptions(rxs);
-      })
+      .then(([evs, rxs]) => { setEvents(evs); setPrescriptions(rxs); })
       .catch(console.error)
-      .finally(() => setEventsLoading(false));
+      .finally(() => setLoading(false));
   }, [selectedPetId]);
 
-  // Derived analytics
-  const barData   = buildBarData(events);
-  const donutData = buildDonutData(events);
-  const streak    = calcStreak(events);
-  const top       = topType(events);
-  const total14   = events.filter((ev) =>
-    new Date(ev.occurredAt) >= daysAgo(13)
-  ).length;
-  const alerts    = eventsLoading ? [] : buildAlerts(events, prescriptions);
+  async function handleFetchInsights() {
+    if (!selectedPetId || insightsLoading) return;
+    setInsightsLoading(true);
+    try {
+      const data = await fetchInsights(selectedPetId);
+      setInsights(data.insights ?? []);
+      setInsightsFetched(true);
+    } catch (err) {
+      console.error("Insights error:", err);
+      setInsights([]);
+      setInsightsFetched(true);
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
 
-  const hasData = events.length > 0;
+  // Derived data
+  const activityData = buildActivityData(events);
+  const mealGrid     = buildMealGrid(events);
+  const poopData     = buildPoopData(events);
+  const medAdherence = buildMedAdherence(prescriptions, events);
+  const weightData   = buildWeightData(events);
+  const alerts       = loading ? [] : buildAlerts(events, prescriptions);
+
+  const hasActivity = activityData.some((d) => d.minutes > 0);
+  const hasWeight   = weightData.length >= 2;
+  const streak      = (() => {
+    let s = 0;
+    for (let i = 0; i < 30; i++) {
+      const day = daysAgo(i);
+      if (events.some((ev) => isSameLocalDay(new Date(ev.occurredAt), day))) s++;
+      else break;
+    }
+    return s;
+  })();
+  const total14 = events.filter((ev) => new Date(ev.occurredAt) >= daysAgo(13)).length;
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-stone-950 tracking-tight mb-6">Routine</h1>
+      <h1 className="text-2xl font-bold text-stone-950 tracking-tight mb-6">Routine</h1>
 
       {/* ── Pet selector ─────────────────────────────────────────────────── */}
       <section className="mb-6">
-        <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
-          Which pet?
-        </p>
+        <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.10em] mb-2">Which pet?</p>
         {petsLoading ? (
           <Skeleton className="h-9 w-48" />
         ) : pets.length === 0 ? (
@@ -352,7 +408,7 @@ export default function Routine() {
             No pets yet.{" "}
             <button
               onClick={() => navigate("/pets")}
-              className="text-stone-900 underline underline-offset-2 font-medium"
+              className="text-[#3D3170] font-semibold hover:text-[#2E2454] transition-colors"
             >
               Register one first →
             </button>
@@ -363,10 +419,10 @@ export default function Routine() {
               <button
                 key={pet._id}
                 onClick={() => setSelectedPetId(pet._id)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors active:scale-[0.97] duration-150 ${
                   selectedPetId === pet._id
-                    ? "bg-stone-950 text-white border-stone-950"
-                    : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
+                    ? "bg-[#3D3170] text-white border-[#3D3170]"
+                    : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
                 }`}
               >
                 {pet.name}
@@ -378,62 +434,126 @@ export default function Routine() {
 
       {selectedPetId && (
         <>
-          {/* ── Stat cards ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {eventsLoading ? (
+          {/* ── Stat cards ───────────────────────────────────────────────── */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {loading ? (
               [1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)
             ) : (
               <>
-                <div className="bg-white rounded-xl border border-stone-200 p-3 flex flex-col gap-1">
-                  <p className="text-xs text-stone-400">14-day events</p>
+                {/* 14-day events */}
+                <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_2px_8px_rgba(61,49,112,0.06)] p-3 flex flex-col gap-1">
+                  <p className="text-xs text-stone-400 uppercase tracking-[0.06em] leading-tight">14-day events</p>
                   <p className="text-2xl font-bold text-stone-950">{total14}</p>
                 </div>
-                <div className="bg-white rounded-xl border border-stone-200 p-3 flex flex-col gap-1">
-                  <p className="text-xs text-stone-400">Day streak</p>
-                  <p className="text-2xl font-bold text-stone-950">
+
+                {/* Day streak — emotionally charged, amber glow when active */}
+                <div className={`rounded-2xl border p-3 flex flex-col gap-1 transition-all duration-300 ${
+                  streak > 0
+                    ? "bg-gradient-to-br from-[#F0EEF3] to-[#FFFFFF] border-[#E2E0EB]/80 shadow-[0_2px_8px_rgba(61,49,112,0.08)]"
+                    : "bg-[#FFFFFF] border-stone-200/60 shadow-[0_2px_8px_rgba(61,49,112,0.06)]"
+                }`}>
+                  <p className="text-xs text-stone-400 uppercase tracking-[0.06em] leading-tight flex items-center gap-1">
+                    Streak
+                    {streak > 0 && <Flame size={10} className="text-[#3D3170]" />}
+                  </p>
+                  <p className={`text-2xl font-bold ${streak > 0 ? "text-[#3D3170]" : "text-stone-950"}`}>
                     {streak}
-                    {streak === 30 && (
-                      <span className="text-sm font-normal text-stone-400">+</span>
-                    )}
+                    {streak === 30 && <span className="text-sm font-normal text-stone-400">+</span>}
                   </p>
                 </div>
-                <div className="bg-white rounded-xl border border-stone-200 p-3 flex flex-col gap-1">
-                  <p className="text-xs text-stone-400">Top type</p>
-                  <p className="text-sm font-bold text-stone-950 leading-tight mt-auto">
-                    {top ? (
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ background: TYPE_COLORS[top] }}
-                        />
-                        {TYPE_LABELS[top]}
-                      </span>
-                    ) : "—"}
+
+                {/* Prescriptions */}
+                <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_2px_8px_rgba(61,49,112,0.06)] p-3 flex flex-col gap-1">
+                  <p className="text-xs text-stone-400 uppercase tracking-[0.06em] leading-tight">Prescriptions</p>
+                  <p className={`text-2xl font-bold ${prescriptions.length > 0 ? "text-[#3D3170]" : "text-stone-950"}`}>
+                    {prescriptions.length}
                   </p>
                 </div>
               </>
             )}
           </div>
 
-          {/* ── Health alerts ──────────────────────────────────────────── */}
-          {!eventsLoading && <AlertsPanel alerts={alerts} />}
+          {/* ── Health alerts ────────────────────────────────────────────── */}
+          {!loading && <AlertsPanel alerts={alerts} />}
 
-          {/* ── 14-day stacked bar ─────────────────────────────────────── */}
-          <section className="bg-white rounded-xl border border-stone-200 p-4 mb-4">
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-4">
-              Last 14 days
-            </p>
-            {eventsLoading ? (
-              <Skeleton className="h-40 w-full" />
-            ) : !hasData ? (
-              <p className="text-sm text-stone-400 text-center py-8">No events in the last 30 days.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart
-                  data={barData}
-                  barSize={12}
-                  margin={{ top: 0, right: 0, left: -28, bottom: 0 }}
+          {/* ── AI health insights ───────────────────────────────────────── */}
+          {!loading && (
+            <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_4px_12px_rgba(61,49,112,0.06)] hover:shadow-[0_4px_20px_rgba(61,49,112,0.10)] transition-shadow duration-200 p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+                  <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">AI Health Insights</p>
+                </div>
+                {insightsFetched && !insightsLoading && (
+                  <button
+                    onClick={handleFetchInsights}
+                    className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-[#3D3170] transition-colors"
+                  >
+                    <RefreshCw size={11} />
+                    Refresh
+                  </button>
+                )}
+              </div>
+
+              {insightsLoading ? (
+                <div className="flex flex-col gap-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-14 bg-stone-100 rounded-xl animate-pulse" />
+                  ))}
+                  <p className="text-xs text-stone-400 text-center mt-1">Gemini is analyzing 30 days of care data…</p>
+                </div>
+              ) : insightsFetched && insights.length === 0 ? (
+                <p className="text-sm text-stone-400 text-center py-4">No patterns detected yet — log more events to improve accuracy.</p>
+              ) : insightsFetched ? (
+                <div className="flex flex-col gap-2">
+                  {insights.map((ins, i) => {
+                    const styles = {
+                      positive: { wrap: "bg-emerald-50 border-emerald-200/70 text-emerald-900", icon: <CheckCircle size={15} className="mt-0.5 shrink-0 text-emerald-600" /> },
+                      info:     { wrap: "bg-sky-50 border-sky-200/70 text-sky-900",             icon: <Info         size={15} className="mt-0.5 shrink-0 text-sky-500"    /> },
+                      warn:     { wrap: "bg-orange-50 border-orange-200 text-orange-900",       icon: <AlertTriangle size={15} className="mt-0.5 shrink-0 text-orange-500" /> },
+                    };
+                    const s = styles[ins.level] ?? styles.info;
+                    return (
+                      <div key={i} className={`flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm ${s.wrap}`}>
+                        {s.icon}
+                        <div>
+                          <p className="font-semibold text-[13px] leading-snug mb-0.5">{ins.title}</p>
+                          <p className="text-[12px] leading-snug opacity-80">{ins.text}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <button
+                  onClick={handleFetchInsights}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#F0EEF3] to-[#FFFFFF] border border-[#E2E0EB]/60 text-[#3D3170] text-sm font-semibold hover:border-[#C8C5D8] hover:shadow-sm active:scale-[0.98] transition-all duration-150"
                 >
+                  <Sparkles size={15} strokeWidth={2} />
+                  {`Analyze ${pets.find((p) => p._id === selectedPetId)?.name ?? "pet"}'s health patterns`}
+                </button>
+              )}
+            </section>
+          )}
+
+          {/* ── Activity trend ────────────────────────────────────────────── */}
+          <SectionCard
+            title="Activity — daily minutes (14 days)"
+            empty={!loading && !hasActivity}
+            emptyText="No activity logged yet."
+          >
+            {loading ? (
+              <Skeleton className="h-36 w-full" />
+            ) : (
+              <ResponsiveContainer width="100%" height={148}>
+                <BarChart data={activityData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }} barCategoryGap="30%">
+                  <CartesianGrid
+                    horizontal={true}
+                    vertical={false}
+                    stroke="#E2E0EB"
+                    strokeDasharray="3 3"
+                    strokeOpacity={0.7}
+                  />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 9, fill: "#a8a29e" }}
@@ -447,65 +567,206 @@ export default function Routine() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<BarTooltip />} cursor={{ fill: "#f5f5f4" }} />
-                  {EVENT_TYPES.map((t, i) => (
-                    <Bar
-                      key={t}
-                      dataKey={t}
-                      stackId="a"
-                      fill={TYPE_COLORS[t]}
-                      radius={i === EVENT_TYPES.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
-                    />
-                  ))}
+                  <Tooltip
+                    content={<ActivityTooltip />}
+                    cursor={{ fill: "rgba(61,49,112,0.05)" }}
+                  />
+                  <Bar
+                    dataKey="minutes"
+                    fill="#3D3170"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={20}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </section>
+          </SectionCard>
 
-          {/* ── Type distribution donut ────────────────────────────────── */}
-          <section className="bg-white rounded-xl border border-stone-200 p-4 mb-8">
-            <p className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-4">
-              Type distribution (30 days)
-            </p>
-            {eventsLoading ? (
-              <Skeleton className="h-48 w-full" />
-            ) : !hasData ? (
-              <p className="text-sm text-stone-400 text-center py-8">No events in the last 30 days.</p>
+          {/* ── Meal regularity grid ──────────────────────────────────────── */}
+          <SectionCard title="Meals — 14-day appetite">
+            {loading ? (
+              <Skeleton className="h-20 w-full" />
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie
-                    data={donutData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {donutData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [`${value} events`, name]}
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "1px solid #e7e5e4",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value) => (
-                      <span style={{ fontSize: 11, color: "#78716c" }}>{value}</span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <>
+                <div className="grid grid-cols-7 gap-1.5 mb-3">
+                  {mealGrid.map(({ day, label, status, count }) => {
+                    const { bg } = MEAL_DOT[status] ?? MEAL_DOT.none;
+                    return (
+                      <div
+                        key={day.toISOString()}
+                        className="flex flex-col items-center gap-1"
+                        title={`${label}${count ? ` · ${count} meal${count > 1 ? "s" : ""}` : ""}`}
+                      >
+                        <div className={`w-7 h-7 rounded-lg ${bg}`} />
+                        <span className="text-[9px] text-stone-400 leading-none">
+                          {day.toLocaleDateString("en-US", { day: "numeric" })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Legend */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {Object.entries(MEAL_DOT).map(([k, { bg, label }]) => (
+                    <div key={k} className="flex items-center gap-1.5">
+                      <span className={`w-2.5 h-2.5 rounded-sm ${bg}`} />
+                      <span className="text-xs text-stone-400">{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
-          </section>
+          </SectionCard>
+
+          {/* ── Poop health ───────────────────────────────────────────────── */}
+          <SectionCard
+            title="Digestive health — consistency (30 days)"
+            empty={!loading && !poopData}
+            emptyText="Log at least 2 poop events to see the breakdown."
+          >
+            {loading ? (
+              <Skeleton className="h-28 w-full" />
+            ) : poopData ? (
+              <div className="flex items-center gap-5">
+                <div className="shrink-0">
+                  <ResponsiveContainer width={110} height={110}>
+                    <PieChart>
+                      <Pie
+                        data={poopData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={32}
+                        outerRadius={50}
+                        paddingAngle={2}
+                        dataKey="value"
+                        startAngle={90}
+                        endAngle={-270}
+                      >
+                        {poopData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [`${value} time${value !== 1 ? "s" : ""}`, name]}
+                        contentStyle={{
+                          borderRadius: "12px",
+                          border: "1px solid rgba(0,0,0,0.06)",
+                          background: "#FFFFFF",
+                          fontSize: "11px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {poopData.map((entry) => (
+                    <div key={entry.name} className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: entry.fill }} />
+                      <span className="text-xs text-stone-600">
+                        {entry.name}
+                        <span className="text-stone-400 ml-1">({entry.value})</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </SectionCard>
+
+          {/* ── Medication adherence ──────────────────────────────────────── */}
+          {medAdherence.length > 0 && (
+            <SectionCard title="Medication adherence — this week">
+              {loading ? (
+                <Skeleton className="h-20 w-full" />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {medAdherence.map(({ name, logged, expected, pct }) => (
+                    <div key={name}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="font-medium text-stone-700 truncate">{name}</span>
+                        <span className="text-stone-400 shrink-0 ml-2">{logged} / {expected} doses</span>
+                      </div>
+                      <div className="w-full h-2.5 bg-stone-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            pct >= 1 ? "bg-emerald-700" : pct >= 0.5 ? "bg-amber-600" : "bg-rose-600"
+                          }`}
+                          style={{ width: `${pct * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          )}
+
+          {/* ── Weight trend ──────────────────────────────────────────────── */}
+          <SectionCard
+            title="Weight — trend"
+            empty={!loading && !hasWeight}
+            emptyText="Log at least 2 weight events to see the trend."
+          >
+            {loading ? (
+              <Skeleton className="h-36 w-full" />
+            ) : hasWeight ? (
+              <>
+                {/* Mini stat row */}
+                {(() => {
+                  const first   = weightData[0].kg;
+                  const current = weightData[weightData.length - 1].kg;
+                  const delta   = +(current - first).toFixed(2);
+                  const min     = Math.min(...weightData.map((d) => d.kg));
+                  const max     = Math.max(...weightData.map((d) => d.kg));
+                  return (
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {[
+                        { label: "Current",  value: `${current} kg` },
+                        { label: "Change",   value: delta === 0 ? "—" : `${delta > 0 ? "+" : ""}${delta} kg`, accent: delta < 0 ? "text-emerald-700" : delta > 0 ? "text-orange-600" : "" },
+                        { label: "Range",    value: `${min}–${max} kg` },
+                      ].map(({ label, value, accent }) => (
+                        <div key={label} className="bg-[#F5F4F7] rounded-xl p-2.5">
+                          <p className="text-[10px] text-stone-400 mb-0.5">{label}</p>
+                          <p className={`text-sm font-bold ${accent || "text-stone-950"}`}>{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <ResponsiveContainer width="100%" height={130}>
+                  <LineChart data={weightData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 9, fill: "#a8a29e" }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis
+                      domain={([min, max]) => [
+                        Math.max(0, parseFloat((min - 0.5).toFixed(1))),
+                        parseFloat((max + 0.5).toFixed(1)),
+                      ]}
+                      tick={{ fontSize: 9, fill: "#a8a29e" }}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v) => `${v}`}
+                    />
+                    <Tooltip
+                      content={<WeightTooltip />}
+                      cursor={{ stroke: "#e7e5e4", strokeWidth: 1 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="kg"
+                      stroke="#3D3170"
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: "white", stroke: "#3D3170", strokeWidth: 2 }}
+                      activeDot={{ r: 6, fill: "white", stroke: "#3D3170", strokeWidth: 2.5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </>
+            ) : null}
+          </SectionCard>
         </>
       )}
     </div>

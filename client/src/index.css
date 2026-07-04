@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+/* ── Safe-area utility ────────────────────────────────────────────────────────
+   Handles iPhone notch / home-indicator zone. Apply to the nav spacer div.    */
+@layer utilities {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* ── Streak celebration ───────────────────────────────────────────────────────
+   Add class `streak-pop` to a streak counter when a milestone is hit.
+   Remove it one frame later (via JS setTimeout) so it re-triggers next time.  */
+@keyframes streak-pop {
+  0%   { transform: scale(1);    color: inherit; }
+  35%  { transform: scale(1.22); color: #3D3170; }
+  65%  { transform: scale(0.94); }
+  100% { transform: scale(1);    color: inherit; }
+}
+
+.streak-pop {
+  animation: streak-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── Smooth scroll ────────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
