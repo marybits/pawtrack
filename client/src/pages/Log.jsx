@@ -15,7 +15,7 @@ const TYPE_CONFIG = {
   litter:     { label: "Litter",     dot: "bg-stone-400"  },
   poop:       { label: "Poop",       dot: "bg-amber-900"  },
   treats:     { label: "Treats",     dot: "bg-orange-600" },
-  weight:     { label: "Weight",     dot: "bg-sky-600"    },
+  weight:     { label: "Weight",     dot: "bg-[#A690A4]"    },
 };
 
 const EVENT_TYPES = Object.keys(TYPE_CONFIG);
@@ -54,7 +54,7 @@ function summarize(type, details = {}) {
 
 // ── Shared input style ─────────────────────────────────────────────────────
 const inputClass =
-  "w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors";
+  "w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors";
 
 // ── Detail fields per event type ───────────────────────────────────────────
 function DetailFields({ type, details, onChange }) {
@@ -98,11 +98,11 @@ function DetailFields({ type, details, onChange }) {
             onClick={() => onChange({ ...details, askedForMore: !details.askedForMore })}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
               details.askedForMore
-                ? "bg-amber-50 border-amber-300 text-amber-800"
+                ? "bg-[#F0EEF3] border-[#3D3170]/30 text-[#3C2E37]"
                 : "border-stone-200 text-stone-500 hover:border-stone-400"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-amber-500" : "bg-stone-300"}`} />
+            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-[#3D3170]" : "bg-stone-300"}`} />
             Pet asked for more food
           </button>
         </div>
@@ -361,7 +361,7 @@ export default function Log() {
 
       {/* ── Pet selector ─────────────────────────────────────────────────── */}
       <section className="mb-5">
-        <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
+        <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
           Which pet?
         </p>
         {petsLoading ? (
@@ -371,7 +371,7 @@ export default function Log() {
             No pets yet.{" "}
             <button
               onClick={() => navigate("/pets")}
-              className="text-[#B45309] font-semibold hover:text-[#92400E] transition-colors"
+              className="text-[#3D3170] font-semibold hover:text-[#2E2454] transition-colors"
             >
               Register one first →
             </button>
@@ -384,8 +384,8 @@ export default function Log() {
                 onClick={() => setSelectedPetId(pet._id)}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors active:scale-[0.97] duration-150 ${
                   selectedPetId === pet._id
-                    ? "bg-[#B45309] text-white border-[#B45309]"
-                    : "bg-[#FFFCF7] text-stone-600 border-stone-200 hover:border-stone-300"
+                    ? "bg-[#3D3170] text-white border-[#3D3170]"
+                    : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
                 }`}
               >
                 {pet.name}
@@ -399,13 +399,13 @@ export default function Log() {
         <>
           {/* ── Pet context banner ──────────────────────────────────────── */}
           {selectedPet && (
-            <div className="flex items-center gap-2.5 bg-gradient-to-r from-amber-50 to-[#FFFCF7] border border-amber-200/60 rounded-2xl px-3.5 py-2.5 mb-5">
-              <div className="w-7 h-7 rounded-xl bg-[#B45309]/10 flex items-center justify-center shrink-0">
-                <span className="text-[#B45309] text-xs font-bold">{selectedPet.name[0]}</span>
+            <div className="flex items-center gap-2.5 bg-gradient-to-r from-[#F0EEF3] to-[#FFFFFF] border border-[#E2E0EB]/60 rounded-2xl px-3.5 py-2.5 mb-5">
+              <div className="w-7 h-7 rounded-xl bg-[#3D3170]/10 flex items-center justify-center shrink-0">
+                <span className="text-[#3D3170] text-xs font-bold">{selectedPet.name[0]}</span>
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-stone-700 leading-none">
-                  Logging for <span className="text-[#B45309]">{selectedPet.name}</span>
+                  Logging for <span className="text-[#3D3170]">{selectedPet.name}</span>
                 </p>
                 <p className="text-[10px] text-stone-400 mt-0.5 capitalize">{selectedPet.species}{selectedPet.breed ? ` · ${selectedPet.breed}` : ""}</p>
               </div>
@@ -423,7 +423,7 @@ export default function Log() {
                   : "text-stone-500 hover:text-stone-700"
               }`}
             >
-              <Sparkles size={14} strokeWidth={2} className={mode === "nl" ? "text-[#B45309]" : ""} />
+              <Sparkles size={14} strokeWidth={2} className={mode === "nl" ? "text-[#3D3170]" : ""} />
               AI Quick Log
             </button>
             <button
@@ -442,8 +442,8 @@ export default function Log() {
 
           {/* ── Success banner ───────────────────────────────────────────── */}
           {success && (
-            <div className="mb-4 rounded-xl bg-[#FEF3C7] border border-[#B45309]/30 px-3 py-2.5 text-sm text-[#78350F] flex items-center gap-2">
-              <CheckCircle size={16} className="text-[#B45309] shrink-0" />
+            <div className="mb-4 rounded-xl bg-[#F0EEF3] border border-[#3D3170]/30 px-3 py-2.5 text-sm text-[#3C2E37] flex items-center gap-2">
+              <CheckCircle size={16} className="text-[#3D3170] shrink-0" />
               Event logged!
             </div>
           )}
@@ -480,7 +480,7 @@ export default function Log() {
 
               {/* Event type picker */}
               <section className="mb-5">
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
+                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
                   What happened?
                 </p>
                 <div className="grid grid-cols-3 gap-2">
@@ -494,8 +494,8 @@ export default function Log() {
                         onClick={() => pickType(type)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors active:scale-[0.97] duration-150 ${
                           active
-                            ? "bg-[#FEF3C7] border-[#B45309] text-stone-900"
-                            : "bg-[#FFFCF7] text-stone-600 border-stone-200 hover:border-stone-300"
+                            ? "bg-[#F0EEF3] border-[#3D3170] text-stone-900"
+                            : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
                         }`}
                       >
                         <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
@@ -509,7 +509,7 @@ export default function Log() {
               {/* Per-type detail fields */}
               {eventType && (
                 <section className="mb-5">
-                  <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
+                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
                     Details
                   </p>
 
@@ -550,7 +550,7 @@ export default function Log() {
               {/* When + Notes */}
               <section className="mb-5 flex flex-col gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
+                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
                     When?
                   </label>
                   <input
@@ -565,7 +565,7 @@ export default function Log() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">
+                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
                     Notes <span className="normal-case text-stone-300">(optional)</span>
                   </label>
                   <input
@@ -586,7 +586,7 @@ export default function Log() {
               <button
                 type="submit"
                 disabled={submitting || !eventType || !!dateError}
-                className="w-full bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                className="w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
               >
                 {submitting ? "Saving…" : "Log event"}
               </button>
@@ -600,7 +600,7 @@ export default function Log() {
         <section>
           {/* Header row */}
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wide">
+            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em]">
               {activeFilterCount > 0 ? "Events (filtered)" : "Recent events"}
             </p>
             <div className="flex items-center gap-2">
@@ -616,14 +616,14 @@ export default function Log() {
                 onClick={() => setShowFilters((v) => !v)}
                 className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors active:scale-[0.97] duration-150 ${
                   showFilters || activeFilterCount > 0
-                    ? "bg-[#B45309] text-white border-[#B45309]"
-                    : "bg-[#FFFCF7] text-stone-600 border-stone-200 hover:border-stone-300"
+                    ? "bg-[#3D3170] text-white border-[#3D3170]"
+                    : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
                 }`}
               >
                 <SlidersHorizontal size={12} strokeWidth={2} />
                 Filters
                 {activeFilterCount > 0 && (
-                  <span className="bg-white text-[#B45309] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                  <span className="bg-white text-[#3D3170] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
                     {activeFilterCount}
                   </span>
                 )}
@@ -633,9 +633,9 @@ export default function Log() {
 
           {/* Filter panel */}
           {showFilters && (
-            <div className="bg-[#FAF7F0] border border-stone-200/60 rounded-xl p-4 mb-3 flex flex-col gap-3">
+            <div className="bg-[#F5F4F7] border border-stone-200/60 rounded-xl p-4 mb-3 flex flex-col gap-3">
               <div>
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Type</p>
+                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">Type</p>
                 <div className="flex flex-wrap gap-1.5">
                   {[{ value: "", label: "All" }, ...EVENT_TYPES.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
                     <button
@@ -644,8 +644,8 @@ export default function Log() {
                       onClick={() => setFilterType(value)}
                       className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                         filterType === value
-                          ? "bg-[#B45309] text-white border-[#B45309]"
-                          : "bg-[#FFFCF7] text-stone-600 border-stone-200 hover:border-stone-300"
+                          ? "bg-[#3D3170] text-white border-[#3D3170]"
+                          : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
                       }`}
                     >
                       {label}
@@ -656,7 +656,7 @@ export default function Log() {
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-stone-400 uppercase tracking-wide mb-1">From</label>
+                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">From</label>
                   <input
                     type="date"
                     value={filterFrom}
@@ -666,7 +666,7 @@ export default function Log() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-stone-400 uppercase tracking-wide mb-1">To</label>
+                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">To</label>
                   <input
                     type="date"
                     value={filterTo}
@@ -691,7 +691,7 @@ export default function Log() {
               {activeFilterCount > 0 ? "No events match these filters." : "No events yet for this pet."}
             </p>
           ) : (
-            <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm px-4 divide-y divide-stone-100">
+            <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm px-4 divide-y divide-stone-100">
               {(activeFilterCount > 0 ? events.slice(0, 50) : events.slice(0, 10)).map((ev) => (
                 <EventItem key={ev._id} event={ev} />
               ))}

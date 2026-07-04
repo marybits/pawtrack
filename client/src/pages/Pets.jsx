@@ -6,7 +6,7 @@ import { getPrescriptions, addPrescription, patchPrescription } from "../api/pre
 
 // ── Shared input style ─────────────────────────────────────────────────────
 const inputClass =
-  "w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors";
+  "w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors";
 
 // ── Frequency options ──────────────────────────────────────────────────────
 const FREQ_OPTIONS = [
@@ -23,13 +23,13 @@ function intervalLabel(h) {
 }
 
 // ── Pet avatar — brand amber, consistent across all pets ──────────────────
-const PET_ACCENT = { bg: "bg-[#FEF3C7]", text: "text-[#B45309]" };
+const PET_ACCENT = { bg: "bg-[#F0EEF3]", text: "text-[#3D3170]" };
 function petAccent() { return PET_ACCENT; }
 
 // ── Skeleton ───────────────────────────────────────────────────────────────
 function PetSkeleton() {
   return (
-    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-4 animate-pulse shadow-sm">
+    <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 p-4 animate-pulse shadow-sm">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-stone-100" />
         <div className="flex-1 space-y-2">
@@ -91,7 +91,7 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
       onSubmit={handleSubmit}
       className="mt-3 pt-3 border-t border-stone-100 flex flex-col gap-3"
     >
-      <p className="text-xs font-semibold text-[#B45309] flex items-center gap-1.5">
+      <p className="text-xs font-semibold text-[#3D3170] flex items-center gap-1.5">
         <Pill size={11} /> New prescription
       </p>
 
@@ -192,7 +192,7 @@ function AddRxForm({ petId, onSuccess, onCancel }) {
         <button
           type="submit"
           disabled={loading}
-          className="flex-1 bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-3 py-2 text-sm font-medium transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
+          className="flex-1 bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-3 py-2 text-sm font-medium transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
         >
           {loading ? "Saving…" : "Save"}
         </button>
@@ -227,7 +227,7 @@ function RxRow({ petId, rx, onDeactivated }) {
   return (
     <div className="flex items-start justify-between gap-2 py-2">
       <div className="min-w-0 flex items-start gap-2">
-        <Pill size={13} strokeWidth={1.5} className="text-[#B45309] shrink-0 mt-0.5" />
+        <Pill size={13} strokeWidth={1.5} className="text-[#3D3170] shrink-0 mt-0.5" />
         <div className="min-w-0">
           <p className="text-sm font-medium text-stone-800 truncate">{rx.medicationName}</p>
           <p className="text-xs text-stone-400">
@@ -281,7 +281,7 @@ function PetCard({ pet }) {
   }
 
   return (
-    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+    <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 p-4 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
 
       {/* ── Pet identity — tappable → profile ────────────────────────────── */}
       <button
@@ -321,7 +321,7 @@ function PetCard({ pet }) {
         onClick={() => setShowRx((v) => !v)}
         className="mt-3 w-full flex items-center justify-between border-t border-stone-100 pt-3 transition-colors group"
       >
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-[#B45309] group-hover:text-[#92400E] transition-colors">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-[#3D3170] group-hover:text-[#2E2454] transition-colors">
           <Pill size={12} strokeWidth={1.75} />
           Prescriptions
         </span>
@@ -358,7 +358,7 @@ function PetCard({ pet }) {
           ) : (
             <button
               onClick={() => setShowForm(true)}
-              className="mt-1.5 flex items-center gap-1 text-xs font-medium text-stone-400 hover:text-[#B45309] transition-colors"
+              className="mt-1.5 flex items-center gap-1 text-xs font-medium text-stone-400 hover:text-[#3D3170] transition-colors"
             >
               <Plus size={12} /> Add prescription
             </button>
@@ -404,7 +404,7 @@ function RegisterForm({ onSuccess, onCancel }) {
   }
 
   return (
-    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-5 shadow-sm">
+    <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 p-5 shadow-sm">
       <h2 className="text-sm font-semibold text-stone-950 mb-4">Register a pet</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
 
@@ -458,7 +458,7 @@ function RegisterForm({ onSuccess, onCancel }) {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
+            className="flex-1 bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
           >
             {loading ? "Saving…" : "Add pet"}
           </button>
@@ -505,7 +505,7 @@ export default function Pets() {
           className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors active:scale-[0.96] duration-150 shadow-sm ${
             showForm
               ? "bg-stone-100 text-stone-600 hover:bg-stone-200"
-              : "bg-[#B45309] text-white hover:bg-[#92400E]"
+              : "bg-[#3D3170] text-white hover:bg-[#2E2454]"
           }`}
         >
           {showForm ? <X size={16} strokeWidth={2} /> : <Plus size={16} strokeWidth={2} />}
@@ -528,8 +528,8 @@ export default function Pets() {
           </>
         ) : pets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-[#FEF3C7] flex items-center justify-center mb-4">
-              <PawPrint size={26} strokeWidth={1.5} className="text-[#B45309]" />
+            <div className="w-14 h-14 rounded-2xl bg-[#F0EEF3] flex items-center justify-center mb-4">
+              <PawPrint size={26} strokeWidth={1.5} className="text-[#3D3170]" />
             </div>
             <p className="text-stone-500 text-sm leading-relaxed">
               No pets yet — tap{" "}

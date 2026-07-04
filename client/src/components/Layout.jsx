@@ -13,13 +13,13 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF7F0]">
+    <div className="min-h-screen bg-[#F5F4F7]">
       {/* ── Top bar ──────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-[#FAF7F0]/92 backdrop-blur-md border-b border-stone-200/50 shadow-[0_1px_12px_rgba(180,83,9,0.06)]">
+      <header className="sticky top-0 z-40 bg-[#F5F4F7]/92 backdrop-blur-md border-b border-stone-200/50 shadow-[0_1px_12px_rgba(61,49,112,0.06)]">
         <div className="max-w-md mx-auto px-4 h-14 flex items-center justify-between">
           {/* Two-tone wordmark */}
           <span className="text-xl font-extrabold tracking-tight select-none">
-            <span className="text-[#B45309]">Paw</span>
+            <span className="text-[#3D3170]">Paw</span>
             <span className="text-stone-900">Track</span>
           </span>
 

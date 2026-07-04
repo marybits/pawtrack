@@ -29,11 +29,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center px-4 py-8 relative overflow-hidden">
+    <div className="min-h-screen bg-[#F5F4F7] flex items-center justify-center px-4 py-8 relative overflow-hidden">
 
       {/* ── Decorative paw watermarks ─────────────────────────────────────── */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none select-none" aria-hidden="true">
-        <g fill="#B45309" opacity="0.045">
+        <g fill="#3D3170" opacity="0.045">
           {/* Top-right large */}
           <ellipse cx="88%" cy="12%" rx="52" ry="42" />
           <ellipse cx="74%" cy="4%"  rx="20" ry="16" />
@@ -53,18 +53,18 @@ export default function Login() {
 
         {/* ── Brand moment ──────────────────────────────────────────────────── */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 rounded-3xl bg-[#B45309] flex items-center justify-center shadow-lg shadow-amber-200/60 mb-4">
+          <div className="w-20 h-20 rounded-3xl bg-[#3D3170] flex items-center justify-center shadow-[0_4px_20px_rgba(61,49,112,0.30)] mb-4">
             <PawPrint size={36} strokeWidth={1.75} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
-            <span className="text-[#B45309]">Paw</span>
+            <span className="text-[#3D3170]">Paw</span>
             <span className="text-stone-900">Track</span>
           </h1>
           <p className="mt-1.5 text-sm text-stone-500">Sign in to continue</p>
         </div>
 
         {/* ── Card ──────────────────────────────────────────────────────────── */}
-        <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 p-6 shadow-sm">
+        <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 p-6 shadow-sm">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
             <div>
@@ -78,7 +78,7 @@ export default function Login() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="your_username"
-                className="w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors"
               />
             </div>
 
@@ -93,7 +93,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors"
+                className="w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2.5 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors"
               />
             </div>
 
@@ -106,7 +106,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-1 w-full bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-1 w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Signing in…" : "Sign in"}
             </button>
@@ -119,7 +119,7 @@ export default function Login() {
           Don&apos;t have an account?{" "}
           <Link
             to="/register"
-            className="text-[#B45309] font-semibold hover:text-[#92400E] transition-colors"
+            className="text-[#3D3170] font-semibold hover:text-[#2E2454] transition-colors"
           >
             Sign up
           </Link>

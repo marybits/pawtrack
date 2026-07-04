@@ -13,7 +13,7 @@
    Remove it one frame later (via JS setTimeout) so it re-triggers next time.  */
 @keyframes streak-pop {
   0%   { transform: scale(1);    color: inherit; }
-  35%  { transform: scale(1.22); color: #B45309; }
+  35%  { transform: scale(1.22); color: #3D3170; }
   65%  { transform: scale(0.94); }
   100% { transform: scale(1);    color: inherit; }
 }

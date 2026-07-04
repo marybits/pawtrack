@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Info, Flame, Sparkles, RefreshCw, CheckCircle } from "lucide-react";
 import {
-  AreaChart, Area, LineChart, Line,
+  BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
 import { getPets }         from "../api/pets.js";
 import { getEvents }        from "../api/events.js";
@@ -257,10 +257,10 @@ function Skeleton({ className }) {
 
 function SectionCard({ title, children, empty, emptyText }) {
   return (
-    <section className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-4">
+    <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_4px_12px_rgba(61,49,112,0.06)] hover:shadow-[0_4px_20px_rgba(61,49,112,0.10)] transition-shadow duration-200 p-4 mb-4">
       <div className="flex items-center gap-2 mb-4">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] shrink-0" />
-        <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">{title}</p>
+        <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+        <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">{title}</p>
       </div>
       {empty ? (
         <p className="text-sm text-stone-400 text-center py-6">{emptyText ?? "Not enough data yet."}</p>
@@ -296,9 +296,9 @@ function AlertsPanel({ alerts }) {
 function WeightTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#FFFCF7] border border-stone-200/60 rounded-xl shadow-sm px-3 py-2 text-xs">
+    <div className="bg-[#FFFFFF] border border-stone-200/60 rounded-xl shadow-sm px-3 py-2 text-xs">
       <p className="font-semibold text-stone-700 mb-0.5">{label}</p>
-      <p className="text-[#B45309] font-bold">{payload[0]?.value} kg</p>
+      <p className="text-[#3D3170] font-bold">{payload[0]?.value} kg</p>
     </div>
   );
 }
@@ -309,7 +309,7 @@ function ActivityTooltip({ active, payload, label }) {
   const { minutes, sessions } = payload[0]?.payload ?? {};
   if (!minutes && !sessions) return null;
   return (
-    <div className="bg-[#FFFCF7] border border-stone-200/60 rounded-xl shadow-sm px-3 py-2 text-xs">
+    <div className="bg-[#FFFFFF] border border-stone-200/60 rounded-xl shadow-sm px-3 py-2 text-xs">
       <p className="font-semibold text-stone-700 mb-1">{label}</p>
       <p className="text-stone-500">{minutes} min · {sessions} session{sessions !== 1 ? "s" : ""}</p>
     </div>
@@ -400,7 +400,7 @@ export default function Routine() {
 
       {/* ── Pet selector ─────────────────────────────────────────────────── */}
       <section className="mb-6">
-        <p className="text-xs font-medium text-stone-400 uppercase tracking-wide mb-2">Which pet?</p>
+        <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.10em] mb-2">Which pet?</p>
         {petsLoading ? (
           <Skeleton className="h-9 w-48" />
         ) : pets.length === 0 ? (
@@ -408,7 +408,7 @@ export default function Routine() {
             No pets yet.{" "}
             <button
               onClick={() => navigate("/pets")}
-              className="text-[#B45309] font-semibold hover:text-[#92400E] transition-colors"
+              className="text-[#3D3170] font-semibold hover:text-[#2E2454] transition-colors"
             >
               Register one first →
             </button>
@@ -421,8 +421,8 @@ export default function Routine() {
                 onClick={() => setSelectedPetId(pet._id)}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors active:scale-[0.97] duration-150 ${
                   selectedPetId === pet._id
-                    ? "bg-[#B45309] text-white border-[#B45309]"
-                    : "bg-[#FFFCF7] text-stone-600 border-stone-200 hover:border-stone-300"
+                    ? "bg-[#3D3170] text-white border-[#3D3170]"
+                    : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
                 }`}
               >
                 {pet.name}
@@ -441,31 +441,31 @@ export default function Routine() {
             ) : (
               <>
                 {/* 14-day events */}
-                <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm p-3 flex flex-col gap-1">
-                  <p className="text-xs text-stone-400 leading-tight">14-day events</p>
+                <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_2px_8px_rgba(61,49,112,0.06)] p-3 flex flex-col gap-1">
+                  <p className="text-xs text-stone-400 uppercase tracking-[0.06em] leading-tight">14-day events</p>
                   <p className="text-2xl font-bold text-stone-950">{total14}</p>
                 </div>
 
                 {/* Day streak — emotionally charged, amber glow when active */}
-                <div className={`rounded-2xl border shadow-sm p-3 flex flex-col gap-1 transition-all duration-300 ${
+                <div className={`rounded-2xl border p-3 flex flex-col gap-1 transition-all duration-300 ${
                   streak > 0
-                    ? "bg-gradient-to-br from-amber-50 to-[#FFFCF7] border-amber-200/80 shadow-amber-100"
-                    : "bg-[#FFFCF7] border-stone-200/60"
+                    ? "bg-gradient-to-br from-[#F0EEF3] to-[#FFFFFF] border-[#E2E0EB]/80 shadow-[0_2px_8px_rgba(61,49,112,0.08)]"
+                    : "bg-[#FFFFFF] border-stone-200/60 shadow-[0_2px_8px_rgba(61,49,112,0.06)]"
                 }`}>
-                  <p className="text-xs text-stone-400 leading-tight flex items-center gap-1">
+                  <p className="text-xs text-stone-400 uppercase tracking-[0.06em] leading-tight flex items-center gap-1">
                     Streak
-                    {streak > 0 && <Flame size={10} className="text-[#B45309]" />}
+                    {streak > 0 && <Flame size={10} className="text-[#3D3170]" />}
                   </p>
-                  <p className={`text-2xl font-bold ${streak > 0 ? "text-[#B45309]" : "text-stone-950"}`}>
+                  <p className={`text-2xl font-bold ${streak > 0 ? "text-[#3D3170]" : "text-stone-950"}`}>
                     {streak}
                     {streak === 30 && <span className="text-sm font-normal text-stone-400">+</span>}
                   </p>
                 </div>
 
                 {/* Prescriptions */}
-                <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm p-3 flex flex-col gap-1">
-                  <p className="text-xs text-stone-400 leading-tight">Prescriptions</p>
-                  <p className={`text-2xl font-bold ${prescriptions.length > 0 ? "text-[#B45309]" : "text-stone-950"}`}>
+                <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_2px_8px_rgba(61,49,112,0.06)] p-3 flex flex-col gap-1">
+                  <p className="text-xs text-stone-400 uppercase tracking-[0.06em] leading-tight">Prescriptions</p>
+                  <p className={`text-2xl font-bold ${prescriptions.length > 0 ? "text-[#3D3170]" : "text-stone-950"}`}>
                     {prescriptions.length}
                   </p>
                 </div>
@@ -478,16 +478,16 @@ export default function Routine() {
 
           {/* ── AI health insights ───────────────────────────────────────── */}
           {!loading && (
-            <section className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm hover:shadow-md transition-shadow duration-200 p-4 mb-4">
+            <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_4px_12px_rgba(61,49,112,0.06)] hover:shadow-[0_4px_20px_rgba(61,49,112,0.10)] transition-shadow duration-200 p-4 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] shrink-0" />
-                  <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">AI Health Insights</p>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+                  <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">AI Health Insights</p>
                 </div>
                 {insightsFetched && !insightsLoading && (
                   <button
                     onClick={handleFetchInsights}
-                    className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-[#B45309] transition-colors"
+                    className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-[#3D3170] transition-colors"
                   >
                     <RefreshCw size={11} />
                     Refresh
@@ -527,10 +527,10 @@ export default function Routine() {
               ) : (
                 <button
                   onClick={handleFetchInsights}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-amber-50 to-[#FFFCF7] border border-amber-200/60 text-[#B45309] text-sm font-semibold hover:border-amber-300 hover:shadow-sm active:scale-[0.98] transition-all duration-150"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-[#F0EEF3] to-[#FFFFFF] border border-[#E2E0EB]/60 text-[#3D3170] text-sm font-semibold hover:border-[#C8C5D8] hover:shadow-sm active:scale-[0.98] transition-all duration-150"
                 >
                   <Sparkles size={15} strokeWidth={2} />
-                  Analyze {pets.find((p) => p._id === selectedPetId)?.name ?? "pet"}'s health patterns
+                  {`Analyze ${pets.find((p) => p._id === selectedPetId)?.name ?? "pet"}'s health patterns`}
                 </button>
               )}
             </section>
@@ -545,14 +545,15 @@ export default function Routine() {
             {loading ? (
               <Skeleton className="h-36 w-full" />
             ) : (
-              <ResponsiveContainer width="100%" height={140}>
-                <AreaChart data={activityData} margin={{ top: 4, right: 0, left: -28, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#B45309" stopOpacity={0.18} />
-                      <stop offset="95%" stopColor="#B45309" stopOpacity={0}    />
-                    </linearGradient>
-                  </defs>
+              <ResponsiveContainer width="100%" height={148}>
+                <BarChart data={activityData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }} barCategoryGap="30%">
+                  <CartesianGrid
+                    horizontal={true}
+                    vertical={false}
+                    stroke="#E2E0EB"
+                    strokeDasharray="3 3"
+                    strokeOpacity={0.7}
+                  />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 9, fill: "#a8a29e" }}
@@ -568,18 +569,15 @@ export default function Routine() {
                   />
                   <Tooltip
                     content={<ActivityTooltip />}
-                    cursor={{ stroke: "#e7e5e4", strokeWidth: 1 }}
+                    cursor={{ fill: "rgba(61,49,112,0.05)" }}
                   />
-                  <Area
-                    type="monotone"
+                  <Bar
                     dataKey="minutes"
-                    stroke="#B45309"
-                    strokeWidth={2}
-                    fill="url(#actGrad)"
-                    dot={{ r: 3, fill: "#B45309", strokeWidth: 0 }}
-                    activeDot={{ r: 4, fill: "#B45309" }}
+                    fill="#3D3170"
+                    radius={[4, 4, 0, 0]}
+                    maxBarSize={20}
                   />
-                </AreaChart>
+                </BarChart>
               </ResponsiveContainer>
             )}
           </SectionCard>
@@ -627,38 +625,50 @@ export default function Routine() {
             emptyText="Log at least 2 poop events to see the breakdown."
           >
             {loading ? (
-              <Skeleton className="h-44 w-full" />
+              <Skeleton className="h-28 w-full" />
             ) : poopData ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <PieChart>
-                  <Pie
-                    data={poopData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={68}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {poopData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value, name) => [`${value} time${value !== 1 ? "s" : ""}`, name]}
-                    contentStyle={{
-                      borderRadius: "16px",
-                      border: "1px solid rgba(0,0,0,0.06)",
-                      background: "#FFFCF7",
-                      fontSize: "12px",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-                    }}
-                  />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(v) => <span style={{ fontSize: 11, color: "#78716c" }}>{v}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="flex items-center gap-5">
+                <div className="shrink-0">
+                  <ResponsiveContainer width={110} height={110}>
+                    <PieChart>
+                      <Pie
+                        data={poopData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={32}
+                        outerRadius={50}
+                        paddingAngle={2}
+                        dataKey="value"
+                        startAngle={90}
+                        endAngle={-270}
+                      >
+                        {poopData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value, name) => [`${value} time${value !== 1 ? "s" : ""}`, name]}
+                        contentStyle={{
+                          borderRadius: "12px",
+                          border: "1px solid rgba(0,0,0,0.06)",
+                          background: "#FFFFFF",
+                          fontSize: "11px",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {poopData.map((entry) => (
+                    <div key={entry.name} className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: entry.fill }} />
+                      <span className="text-xs text-stone-600">
+                        {entry.name}
+                        <span className="text-stone-400 ml-1">({entry.value})</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : null}
           </SectionCard>
 
@@ -714,7 +724,7 @@ export default function Routine() {
                         { label: "Change",   value: delta === 0 ? "—" : `${delta > 0 ? "+" : ""}${delta} kg`, accent: delta < 0 ? "text-emerald-700" : delta > 0 ? "text-orange-600" : "" },
                         { label: "Range",    value: `${min}–${max} kg` },
                       ].map(({ label, value, accent }) => (
-                        <div key={label} className="bg-[#FAF7F0] rounded-xl p-2.5">
+                        <div key={label} className="bg-[#F5F4F7] rounded-xl p-2.5">
                           <p className="text-[10px] text-stone-400 mb-0.5">{label}</p>
                           <p className={`text-sm font-bold ${accent || "text-stone-950"}`}>{value}</p>
                         </div>
@@ -747,10 +757,10 @@ export default function Routine() {
                     <Line
                       type="monotone"
                       dataKey="kg"
-                      stroke="#B45309"
+                      stroke="#3D3170"
                       strokeWidth={2}
-                      dot={{ r: 4, fill: "#B45309", strokeWidth: 0 }}
-                      activeDot={{ r: 5, fill: "#B45309" }}
+                      dot={{ r: 4, fill: "white", stroke: "#3D3170", strokeWidth: 2 }}
+                      activeDot={{ r: 6, fill: "white", stroke: "#3D3170", strokeWidth: 2.5 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>

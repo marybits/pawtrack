@@ -8,7 +8,7 @@ const TYPE_CONFIG = {
   litter:     { label: "Litter",     dot: "bg-stone-400"  },
   poop:       { label: "Poop",       dot: "bg-amber-900"  },
   treats:     { label: "Treats",     dot: "bg-orange-600" },
-  weight:     { label: "Weight",     dot: "bg-sky-600"    },
+  weight:     { label: "Weight",     dot: "bg-[#A690A4]"    },
 };
 
 const EVENT_TYPES = Object.keys(TYPE_CONFIG);
@@ -20,7 +20,7 @@ function toDateTimeLocal(iso) {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-stone-200 bg-[#FAF7F0] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#B45309]/30 focus:border-[#B45309] transition-colors";
+  "w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors";
 
 function DetailFields({ type, details, onChange }) {
   function set(field) {
@@ -62,11 +62,11 @@ function DetailFields({ type, details, onChange }) {
             onClick={() => onChange({ ...details, askedForMore: !details.askedForMore })}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
               details.askedForMore
-                ? "bg-amber-50 border-amber-300 text-amber-800"
+                ? "bg-[#F0EEF3] border-[#3D3170]/30 text-[#3C2E37]"
                 : "border-stone-200 text-stone-500 hover:border-stone-400"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-amber-500" : "bg-stone-300"}`} />
+            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-[#3D3170]" : "bg-stone-300"}`} />
             Pet asked for more food
           </button>
         </div>
@@ -165,7 +165,7 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
   const cfg = TYPE_CONFIG[type];
 
   return (
-    <div className="bg-[#FFFCF7] rounded-2xl border border-[#B45309]/25 shadow-sm p-5">
+    <div className="bg-[#FFFFFF] rounded-2xl border border-[#3D3170]/25 shadow-sm p-5">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
         <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${cfg?.dot ?? "bg-stone-400"}`} />
@@ -189,8 +189,8 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
                   onClick={() => handleTypeChange(t)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
                     active
-                      ? "bg-[#FEF3C7] border-[#B45309] text-stone-900"
-                      : "bg-[#FAF7F0] text-stone-600 border-stone-200 hover:border-stone-300"
+                      ? "bg-[#F0EEF3] border-[#3D3170] text-stone-900"
+                      : "bg-[#F5F4F7] text-stone-600 border-stone-200 hover:border-stone-300"
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />
@@ -250,7 +250,7 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
           type="button"
           onClick={handleConfirm}
           disabled={saving}
-          className="flex items-center gap-1.5 flex-1 justify-center bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
+          className="flex items-center gap-1.5 flex-1 justify-center bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-50"
         >
           <CheckCircle size={14} />
           {saving ? "Saving…" : "Confirm & Save"}

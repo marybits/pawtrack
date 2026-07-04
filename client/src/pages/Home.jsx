@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   PawPrint, Flame, Utensils, Activity, Pill, Plus,
-  ChevronRight, Calendar, Stethoscope, Scissors, Zap, ArrowRight,
+  ChevronRight, Calendar, Stethoscope, Scissors, Zap, ArrowRight, Scale,
 } from "lucide-react";
 import { useAuth } from "../context/AuthProvider.jsx";
 import { getPets } from "../api/pets.js";
@@ -55,13 +55,14 @@ function computeStreak(events) {
 
 const EVENT_META = {
   meal:       { label: "Meal",       Icon: Utensils    },
-  walk:       { label: "Walk",       Icon: Activity    },
+  activity:   { label: "Activity",   Icon: Activity    },
   medication: { label: "Medication", Icon: Pill        },
   vet:        { label: "Vet visit",  Icon: Stethoscope },
   grooming:   { label: "Grooming",   Icon: Scissors    },
-  play:       { label: "Play",       Icon: Zap         },
+  treats:     { label: "Treats",     Icon: Zap         },
   poop:       { label: "Bathroom",   Icon: Calendar    },
-  weight:     { label: "Weight",     Icon: Activity    },
+  weight:     { label: "Weight",     Icon: Scale       },
+  litter:     { label: "Litter",     Icon: Calendar    },
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -74,7 +75,7 @@ function StatusPill({ Icon, label, warn = false }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium ${
         warn
-          ? "bg-orange-50 border border-orange-200/80 text-orange-700"
+          ? "bg-orange-50 border border-orange-300/80 text-orange-700"
           : "bg-stone-100 text-stone-500"
       }`}
     >
@@ -116,19 +117,19 @@ function PetCard({ pet, events, prescriptions, onLog, onView }) {
   });
 
   return (
-    <div className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4">
+    <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_1px_4px_rgba(61,49,112,0.08)] hover:shadow-[0_4px_16px_rgba(61,49,112,0.12)] hover:-translate-y-0.5 transition-all duration-200 p-4">
       {/* ── Header — tappable → profile ──────────────────────────────────── */}
       <button
         onClick={() => onView(pet._id)}
         className="flex items-center justify-between w-full text-left group mb-3"
       >
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-[#FEF3C7] flex items-center justify-center shrink-0">
-            <PawPrint size={20} strokeWidth={1.75} className="text-[#B45309]" />
+          <div className="w-11 h-11 rounded-2xl bg-[#F0EEF3] flex items-center justify-center shrink-0">
+            <PawPrint size={20} strokeWidth={1.75} className="text-[#3D3170]" />
           </div>
           <div>
             <p className="text-base font-bold text-stone-950 leading-tight">{pet.name}</p>
-            <p className="text-xs text-stone-400 capitalize">
+            <p className="text-xs text-stone-400 capitalize tracking-[0.03em]">
               {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
               {pet.weightKg ? ` · ${pet.weightKg} kg` : ""}
             </p>
@@ -136,9 +137,9 @@ function PetCard({ pet, events, prescriptions, onLog, onView }) {
         </div>
         <div className="flex items-center gap-2">
           {streak > 0 && (
-            <div className="flex items-center gap-1 bg-gradient-to-r from-amber-50 to-[#FFFCF7] border border-amber-200/60 rounded-full px-2.5 py-1">
-              <Flame size={12} className="text-[#B45309]" />
-              <span className="text-xs font-bold text-[#B45309]">{streak}</span>
+            <div className="flex items-center gap-1 bg-gradient-to-r from-[#F0EEF3] to-[#FFFFFF] border border-[#E2E0EB]/60 rounded-full px-2.5 py-1">
+              <Flame size={12} className="text-[#3D3170]" />
+              <span className="text-xs font-bold text-[#3D3170]">{streak}</span>
             </div>
           )}
           <ArrowRight size={14} className="text-stone-300 group-hover:text-stone-400 transition-colors" />
@@ -170,10 +171,10 @@ function PetCard({ pet, events, prescriptions, onLog, onView }) {
           {dueMeds.map((rx) => (
             <span
               key={rx._id}
-              className="inline-flex items-center gap-1 text-[10px] font-semibold bg-orange-50 border border-orange-200 text-orange-800 rounded-full px-2.5 py-1"
+              className="inline-flex items-center gap-1 text-[10px] font-semibold bg-[#FDEEE9] border border-[#E05C3A]/30 text-[#E05C3A] rounded-full px-2.5 py-1"
             >
               <Pill size={9} />
-              {rx.name} due
+              {rx.medicationName} due
             </span>
           ))}
         </div>
@@ -182,7 +183,7 @@ function PetCard({ pet, events, prescriptions, onLog, onView }) {
       {/* ── Quick-log CTA ─────────────────────────────────────────────────── */}
       <button
         onClick={() => onLog(pet._id)}
-        className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-[#FEF3C7] hover:bg-amber-100 text-[#B45309] text-sm font-semibold active:scale-[0.98] transition-all duration-150"
+        className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-2xl bg-[#3D3170] hover:bg-[#2E2454] text-white text-sm font-semibold active:scale-[0.98] transition-all duration-150"
       >
         <Plus size={14} strokeWidth={2.5} />
         Log for {pet.name}
@@ -195,8 +196,8 @@ function ActivityItem({ event, petName }) {
   const cfg = EVENT_META[event.type] ?? { label: event.type, Icon: Calendar };
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-stone-100 last:border-0">
-      <div className="w-7 h-7 rounded-lg bg-[#FEF3C7] flex items-center justify-center shrink-0">
-        <cfg.Icon size={13} strokeWidth={2} className="text-[#B45309]" />
+      <div className="w-7 h-7 rounded-lg bg-[#F0EEF3] flex items-center justify-center shrink-0">
+        <cfg.Icon size={13} strokeWidth={2} className="text-[#3D3170]" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm text-stone-800 truncate">
@@ -304,13 +305,13 @@ export default function Home() {
           <Skeleton className="h-44" />
         </div>
       ) : pets.length === 0 ? (
-        <div className="bg-[#FEF3C7] rounded-2xl p-8 text-center mb-6">
-          <PawPrint size={36} strokeWidth={1.5} className="text-[#B45309] mx-auto mb-3" />
+        <div className="bg-[#F0EEF3] rounded-2xl p-8 text-center mb-6">
+          <PawPrint size={36} strokeWidth={1.5} className="text-[#3D3170] mx-auto mb-3" />
           <p className="text-sm font-bold text-stone-800 mb-1">No pets registered yet</p>
           <p className="text-xs text-stone-500 mb-5">Add your first pet to start tracking their health.</p>
           <button
             onClick={() => navigate("/pets")}
-            className="bg-[#B45309] hover:bg-[#92400E] text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98]"
+            className="bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors active:scale-[0.98]"
           >
             Add a pet
           </button>
@@ -332,10 +333,10 @@ export default function Home() {
 
       {/* ── Today's activity feed ─────────────────────────────────────────── */}
       {!loading && pets.length > 0 && (
-        <section className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-3">
+        <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-3">
           <div className="flex items-center gap-2 mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] shrink-0" />
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+            <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">
               Today's activity
             </p>
           </div>
@@ -355,7 +356,7 @@ export default function Home() {
       {!loading && (
         <button
           onClick={() => navigate("/pets")}
-          className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-stone-200/60 bg-[#FFFCF7] text-sm text-stone-500 hover:border-stone-300 hover:bg-stone-50 transition-colors active:scale-[0.98]"
+          className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-stone-200/60 bg-[#FFFFFF] text-sm text-stone-500 hover:border-stone-300 hover:bg-stone-50 transition-colors active:scale-[0.98]"
         >
           <span className="flex items-center gap-2">
             <PawPrint size={13} strokeWidth={1.75} className="text-stone-400" />

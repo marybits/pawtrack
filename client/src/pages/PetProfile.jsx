@@ -93,7 +93,7 @@ const TYPE_META = {
   litter:     { label: "Litter",     Icon: Calendar,    dot: "bg-stone-400"  },
   poop:       { label: "Bathroom",   Icon: Calendar,    dot: "bg-amber-900"  },
   treats:     { label: "Treats",     Icon: Zap,         dot: "bg-orange-600" },
-  weight:     { label: "Weight",     Icon: Scale,       dot: "bg-sky-600"    },
+  weight:     { label: "Weight",     Icon: Scale,       dot: "bg-[#A690A4]"    },
   vet:        { label: "Vet visit",  Icon: Stethoscope, dot: "bg-violet-600" },
   grooming:   { label: "Grooming",   Icon: Scissors,    dot: "bg-teal-600"   },
 };
@@ -114,9 +114,9 @@ function Skeleton({ className }) {
 
 function StatCard({ label, value, sub, accent = false }) {
   return (
-    <div className="bg-[#FAF7F0] rounded-2xl p-3 flex flex-col gap-0.5">
-      <p className="text-[10px] text-stone-400 uppercase tracking-wide">{label}</p>
-      <p className={`text-xl font-bold leading-tight ${accent ? "text-[#B45309]" : "text-stone-950"}`}>
+    <div className="bg-[#F5F4F7] rounded-2xl p-3 flex flex-col gap-0.5">
+      <p className="text-[10px] text-stone-400 uppercase tracking-[0.08em]">{label}</p>
+      <p className={`text-xl font-bold leading-tight ${accent ? "text-[#3D3170]" : "text-stone-950"}`}>
         {value}
       </p>
       {sub && <p className="text-[10px] text-stone-400 leading-tight">{sub}</p>}
@@ -186,7 +186,7 @@ export default function PetProfile() {
     return (
       <div className="text-center py-16 text-stone-400 text-sm">
         Pet not found.{" "}
-        <button onClick={() => navigate("/pets")} className="text-[#B45309] font-semibold">
+        <button onClick={() => navigate("/pets")} className="text-[#3D3170] font-semibold">
           Back to pets
         </button>
       </div>
@@ -224,24 +224,24 @@ export default function PetProfile() {
       </button>
 
       {/* ── Hero header ───────────────────────────────────────────────────── */}
-      <div className="bg-gradient-to-b from-amber-50 to-[#FFFCF7] rounded-2xl border border-amber-200/50 p-6 mb-4 text-center relative overflow-hidden">
+      <div className="bg-gradient-to-b from-[#F0EEF3] to-[#FFFFFF] rounded-2xl border border-[#E2E0EB]/50 p-6 mb-4 text-center relative overflow-hidden">
         {/* Faint paw watermark */}
         <svg className="absolute right-3 bottom-2 opacity-[0.07] pointer-events-none" width="80" height="80" viewBox="0 0 100 100" aria-hidden="true">
-          <ellipse cx="50" cy="65" rx="22" ry="18" fill="#B45309"/>
-          <ellipse cx="25" cy="40" rx="10" ry="8"  fill="#B45309"/>
-          <ellipse cx="75" cy="40" rx="10" ry="8"  fill="#B45309"/>
-          <ellipse cx="38" cy="28" rx="9"  ry="7"  fill="#B45309"/>
-          <ellipse cx="62" cy="28" rx="9"  ry="7"  fill="#B45309"/>
+          <ellipse cx="50" cy="65" rx="22" ry="18" fill="#3D3170"/>
+          <ellipse cx="25" cy="40" rx="10" ry="8"  fill="#3D3170"/>
+          <ellipse cx="75" cy="40" rx="10" ry="8"  fill="#3D3170"/>
+          <ellipse cx="38" cy="28" rx="9"  ry="7"  fill="#3D3170"/>
+          <ellipse cx="62" cy="28" rx="9"  ry="7"  fill="#3D3170"/>
         </svg>
 
         {/* Avatar */}
-        <div className="w-20 h-20 rounded-3xl bg-[#B45309] flex items-center justify-center mx-auto mb-3 shadow-md shadow-amber-200/60">
+        <div className="w-20 h-20 rounded-3xl bg-[#3D3170] flex items-center justify-center mx-auto mb-3 shadow-[0_4px_16px_rgba(61,49,112,0.30)]">
           <PawPrint size={36} strokeWidth={1.75} className="text-white" />
         </div>
 
         {/* Name + meta */}
         <h1 className="text-2xl font-bold text-stone-950 tracking-tight">{pet.name}</h1>
-        <p className="text-sm text-stone-500 capitalize mt-0.5">
+        <p className="text-sm text-stone-500 capitalize tracking-[0.03em] mt-0.5">
           {pet.species}{pet.breed ? ` · ${pet.breed}` : ""}
         </p>
 
@@ -263,7 +263,7 @@ export default function PetProfile() {
             </span>
           )}
           {streak > 0 && (
-            <span className="flex items-center gap-1 text-xs font-bold bg-[#FEF3C7] border border-amber-200/60 text-[#B45309] rounded-full px-3 py-1">
+            <span className="flex items-center gap-1 text-xs font-bold bg-[#F0EEF3] border border-[#E2E0EB]/60 text-[#3D3170] rounded-full px-3 py-1">
               <Flame size={11} />
               {streak} day streak
             </span>
@@ -273,7 +273,7 @@ export default function PetProfile() {
         {/* Log CTA */}
         <button
           onClick={() => navigate("/log", { state: { preselectedPetId: petId } })}
-          className="mt-4 inline-flex items-center gap-2 bg-[#B45309] hover:bg-[#92400E] text-white text-sm font-semibold rounded-xl px-5 py-2.5 transition-colors active:scale-[0.98]"
+          className="mt-4 inline-flex items-center gap-2 bg-[#3D3170] hover:bg-[#2E2454] text-white text-sm font-semibold rounded-xl px-5 py-2.5 transition-colors active:scale-[0.98]"
         >
           <Plus size={15} strokeWidth={2.5} />
           Log for {pet.name}
@@ -302,10 +302,10 @@ export default function PetProfile() {
 
       {/* ── Active prescriptions ──────────────────────────────────────────── */}
       {activeRxs.length > 0 && (
-        <section className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-4">
+        <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-4">
           <div className="flex items-center gap-2 mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] shrink-0" />
-            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+            <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">
               Active prescriptions
             </p>
           </div>
@@ -313,7 +313,7 @@ export default function PetProfile() {
             {activeRxs.map((rx) => (
               <div
                 key={rx._id}
-                className="flex items-center gap-3 bg-[#FAF7F0] rounded-xl px-3 py-2.5"
+                className="flex items-center gap-3 bg-[#F5F4F7] rounded-xl px-3 py-2.5"
               >
                 <div className="w-7 h-7 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
                   <Pill size={13} className="text-rose-600" />
@@ -332,10 +332,10 @@ export default function PetProfile() {
       )}
 
       {/* ── Event timeline ────────────────────────────────────────────────── */}
-      <section className="bg-[#FFFCF7] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-4">
+      <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#B45309] shrink-0" />
-          <p className="text-xs font-semibold text-stone-500 uppercase tracking-wide">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+          <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">
             Recent events
           </p>
         </div>
@@ -359,7 +359,7 @@ export default function PetProfile() {
       {/* ── Manage link ───────────────────────────────────────────────────── */}
       <button
         onClick={() => navigate("/pets")}
-        className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-stone-200/60 bg-[#FFFCF7] text-sm text-stone-500 hover:border-stone-300 transition-colors active:scale-[0.98] mb-2"
+        className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-stone-200/60 bg-[#FFFFFF] text-sm text-stone-500 hover:border-stone-300 transition-colors active:scale-[0.98] mb-2"
       >
         <span className="flex items-center gap-2">
           <PawPrint size={13} strokeWidth={1.75} className="text-stone-400" />
