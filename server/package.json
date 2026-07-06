@@ -21,6 +21,7 @@
     "helmet": "^8.2.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.3.0",
-    "mongoose": "^9.7.1"
+    "mongoose": "^9.7.1",
+    "pdfkit": "^0.19.1"
   }
 }
