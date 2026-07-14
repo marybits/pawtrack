@@ -20,7 +20,8 @@ router.get("/", async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-    await generateVetReport(pet, days, res);
+    const concern = (req.query.concern ?? "").trim().slice(0, 200);
+    await generateVetReport(pet, days, concern, res);
   } catch (err) {
     console.error("Report generation error:", err);
     // Only send error JSON if headers haven't been flushed yet

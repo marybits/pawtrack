@@ -3,11 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, PawPrint, Flame, Plus, Pill,
   Utensils, Activity, Scissors, Zap, Stethoscope, Calendar,
-  Scale, ChevronRight, Camera, Loader2,
+  Scale, ChevronRight, ChevronDown, Camera, Loader2, FileText,
+  Syringe, Trash2, Check,
 } from "lucide-react";
 import { getPetById, uploadPetAvatar } from "../api/pets.js";
+import { apiFetchBlob } from "../api/apiClient.js";
 import { getEvents } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
+import { getVaccines, createVaccine, deleteVaccine } from "../api/vaccines.js";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function daysAgo(n) {
@@ -121,6 +124,14 @@ function resizeImage(file, maxPx = 256) {
   });
 }
 
+function vaccineStatus(nextDue) {
+  if (!nextDue) return null;
+  const days = Math.ceil((new Date(nextDue) - Date.now()) / 86400000);
+  if (days < 0)   return { label: "Overdue",  color: "bg-red-100 text-red-700"   };
+  if (days <= 30) return { label: "Due soon", color: "bg-amber-100 text-amber-700" };
+  return           { label: "Up to date", color: "bg-green-100 text-green-700" };
+}
+
 function intervalLabel(h) {
   if (h <= 13)  return "twice daily";
   if (h <= 25)  return "once daily";
@@ -175,7 +186,37 @@ export default function PetProfile() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading]           = useState(true);
   const [uploading, setUploading]       = useState(false);
+  const [reportDays, setReportDays]     = useState(30);
+  const [reportConcern, setReportConcern] = useState("");
+  const [downloading, setDownloading]   = useState(false);
+  const [eventsOpen, setEventsOpen]     = useState(false);
+  const [vaccines, setVaccines]         = useState([]);
+  const [vaccinesOpen, setVaccinesOpen] = useState(true);
+  const [vaccineForm, setVaccineForm]   = useState({ name: "", lastGiven: "", nextDue: "", notes: "", clinic: "" });
+  const [addingVaccine, setAddingVaccine] = useState(false);
+  const [showVaccineForm, setShowVaccineForm] = useState(false);
   const fileInputRef                    = useRef(null);
+
+  async function handleDownloadReport() {
+    setDownloading(true);
+    try {
+      const params = new URLSearchParams({ days: reportDays });
+      if (reportConcern.trim()) params.set("concern", reportConcern.trim());
+      const { blob, filename } = await apiFetchBlob(
+        `/api/pets/${petId}/report?${params}`
+      );
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement("a");
+      a.href     = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Report download failed:", err);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0];
@@ -194,16 +235,47 @@ export default function PetProfile() {
     }
   }
 
+  async function handleAddVaccine(e) {
+    e.preventDefault();
+    if (!vaccineForm.name.trim()) return;
+    setAddingVaccine(true);
+    try {
+      const v = await createVaccine(petId, vaccineForm);
+      setVaccines((prev) => [...prev, v].sort((a, b) => {
+        if (!a.nextDue) return 1;
+        if (!b.nextDue) return -1;
+        return new Date(a.nextDue) - new Date(b.nextDue);
+      }));
+      setVaccineForm({ name: "", lastGiven: "", nextDue: "", notes: "", clinic: "" });
+      setShowVaccineForm(false);
+    } catch (err) {
+      console.error("Add vaccine failed:", err);
+    } finally {
+      setAddingVaccine(false);
+    }
+  }
+
+  async function handleDeleteVaccine(vaccineId) {
+    try {
+      await deleteVaccine(petId, vaccineId);
+      setVaccines((prev) => prev.filter((v) => v._id !== vaccineId));
+    } catch (err) {
+      console.error("Delete vaccine failed:", err);
+    }
+  }
+
   useEffect(() => {
     Promise.all([
       getPetById(petId),
       getEvents(petId, { from: daysAgo(90).toISOString() }),
       getPrescriptions(petId).catch(() => []),
+      getVaccines(petId).catch(() => []),
     ])
-      .then(([p, evs, rxs]) => {
+      .then(([p, evs, rxs, vax]) => {
         setPet(p);
         setEvents(evs);
         setPrescriptions(rxs);
+        setVaccines(vax);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -403,29 +475,231 @@ export default function PetProfile() {
         </section>
       )}
 
+      {/* ── Vaccines ─────────────────────────────────────────────────────── */}
+      <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm mb-4 overflow-hidden">
+        <button
+          onClick={() => setVaccinesOpen((o) => !o)}
+          className="w-full flex items-center gap-2 p-4 hover:bg-[#F5F4F7]/60 transition-colors"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+          <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em] flex-1 text-left">
+            Vaccines
+          </p>
+          {vaccines.some((v) => v.nextDue && new Date(v.nextDue) < Date.now()) && (
+            <span className="text-[10px] font-semibold bg-red-100 text-red-700 rounded-full px-2 py-0.5 mr-1">
+              Overdue
+            </span>
+          )}
+          <ChevronDown
+            size={14}
+            className={`text-stone-400 transition-transform duration-200 ${vaccinesOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {vaccinesOpen && (
+          <div className="px-4 pb-4">
+            {vaccines.length === 0 && !showVaccineForm ? (
+              <p className="text-sm text-stone-400 text-center py-3">No vaccines recorded yet.</p>
+            ) : (
+              <div className="flex flex-col gap-2 mb-3">
+                {vaccines.map((v) => {
+                  const status = vaccineStatus(v.nextDue);
+                  return (
+                    <div key={v._id} className="flex items-center gap-3 bg-[#F5F4F7] rounded-xl px-3 py-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+                        <Syringe size={13} className="text-violet-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-stone-800">{v.name}</p>
+                          {status && (
+                            <span className={`text-[10px] font-semibold rounded-full px-2 py-0.5 ${status.color}`}>
+                              {status.label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-stone-400 mt-0.5">
+                          {v.lastGiven && `Given: ${new Date(v.lastGiven).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                          {v.lastGiven && v.nextDue && "  ·  "}
+                          {v.nextDue && `Due: ${new Date(v.nextDue).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`}
+                          {v.clinic && `  ·  ${v.clinic}`}
+                        </p>
+                        {v.notes && <p className="text-xs text-stone-400 italic truncate">{v.notes}</p>}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVaccine(v._id)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-stone-300 hover:text-red-500 transition-colors shrink-0"
+                        aria-label="Delete vaccine"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {showVaccineForm ? (
+              <form onSubmit={handleAddVaccine} className="bg-[#F5F4F7] rounded-xl p-3 flex flex-col gap-2">
+                <input
+                  required
+                  placeholder="Vaccine name (e.g. Rabies)"
+                  value={vaccineForm.name}
+                  onChange={(e) => setVaccineForm((f) => ({ ...f, name: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-stone-400 uppercase tracking-wide mb-1 block">Last given</label>
+                    <input
+                      type="date"
+                      value={vaccineForm.lastGiven}
+                      onChange={(e) => setVaccineForm((f) => ({ ...f, lastGiven: e.target.value }))}
+                      className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#3D3170]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-stone-400 uppercase tracking-wide mb-1 block">Next due</label>
+                    <input
+                      type="date"
+                      value={vaccineForm.nextDue}
+                      onChange={(e) => setVaccineForm((f) => ({ ...f, nextDue: e.target.value }))}
+                      className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#3D3170]"
+                    />
+                  </div>
+                </div>
+                <input
+                  placeholder="Clinic (optional)"
+                  value={vaccineForm.clinic}
+                  onChange={(e) => setVaccineForm((f) => ({ ...f, clinic: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
+                />
+                <input
+                  placeholder="Notes (optional)"
+                  value={vaccineForm.notes}
+                  onChange={(e) => setVaccineForm((f) => ({ ...f, notes: e.target.value }))}
+                  className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
+                />
+                <div className="flex gap-2 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowVaccineForm(false)}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold text-stone-500 bg-white border border-stone-200 hover:bg-stone-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingVaccine}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold text-white bg-[#3D3170] hover:bg-[#2E2454] disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {addingVaccine ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                    Save
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setShowVaccineForm(true)}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-[#3D3170] bg-[#F0EEF3] hover:bg-[#E2E0EB] transition-colors"
+              >
+                <Plus size={12} strokeWidth={2.5} />
+                Add vaccine
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
       {/* ── Event timeline ────────────────────────────────────────────────── */}
+      <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm mb-4 overflow-hidden">
+        <button
+          onClick={() => setEventsOpen((o) => !o)}
+          className="w-full flex items-center gap-2 p-4 hover:bg-[#F5F4F7]/60 transition-colors"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+          <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em] flex-1 text-left">
+            Recent events
+          </p>
+          <span className="text-xs text-stone-400 mr-1">
+            {recentEvs.length} logged
+          </span>
+          <ChevronDown
+            size={14}
+            className={`text-stone-400 transition-transform duration-200 ${eventsOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        {eventsOpen && (
+          <div className="px-4 pb-4">
+            {grouped.length === 0 ? (
+              <p className="text-sm text-stone-400 text-center py-6">No events logged yet.</p>
+            ) : (
+              grouped.map(([label, evs]) => (
+                <div key={label} className="mb-1 last:mb-0">
+                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider pt-2 pb-1 first:pt-0">
+                    {label}
+                  </p>
+                  {evs.map((ev) => (
+                    <EventRow key={ev._id} event={ev} />
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* ── Vet report ────────────────────────────────────────────────────── */}
       <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm p-4 mb-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
           <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">
-            Recent events
+            Vet report
           </p>
         </div>
-
-        {grouped.length === 0 ? (
-          <p className="text-sm text-stone-400 text-center py-6">No events logged yet.</p>
-        ) : (
-          grouped.map(([label, evs]) => (
-            <div key={label} className="mb-1 last:mb-0">
-              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider pt-2 pb-1 first:pt-0">
-                {label}
-              </p>
-              {evs.map((ev) => (
-                <EventRow key={ev._id} event={ev} />
-              ))}
-            </div>
-          ))
-        )}
+        <p className="text-xs text-stone-500 mb-3 leading-relaxed">
+          {`Generate a clinical PDF for ${pet.name}'s vet visit — includes alerts, medications, weight, appetite, and stool.`}
+        </p>
+        {/* Reason for visit */}
+        <input
+          type="text"
+          placeholder="Reason for visit / owner concern (optional)"
+          value={reportConcern}
+          onChange={(e) => setReportConcern(e.target.value)}
+          maxLength={200}
+          className="w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170] mb-3"
+        />
+        <div className="flex items-center gap-2">
+          {/* Day selector */}
+          <div className="flex gap-1">
+            {[30, 60, 90].map((d) => (
+              <button
+                key={d}
+                onClick={() => setReportDays(d)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  reportDays === d
+                    ? "bg-[#3D3170] text-white"
+                    : "bg-[#F0EEF3] text-[#3D3170] hover:bg-[#E2E0EB]"
+                }`}
+              >
+                {d}d
+              </button>
+            ))}
+          </div>
+          {/* Download button */}
+          <button
+            onClick={handleDownloadReport}
+            disabled={downloading}
+            className="ml-auto flex items-center gap-2 bg-[#3D3170] hover:bg-[#2E2454] disabled:opacity-60 text-white text-sm font-semibold rounded-xl px-4 py-2 transition-colors active:scale-[0.98]"
+          >
+            {downloading
+              ? <Loader2 size={14} className="animate-spin" />
+              : <FileText size={14} />
+            }
+            {downloading ? "Generating…" : "Download PDF"}
+          </button>
+        </div>
       </section>
 
       {/* ── Manage link ───────────────────────────────────────────────────── */}

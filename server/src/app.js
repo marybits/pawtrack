@@ -9,6 +9,7 @@ import prescriptionsRouter from "./routes/prescriptions.js";
 import parseRouter from "./routes/parse.js";
 import insightsRouter from "./routes/insights.js";
 import reportsRouter from "./routes/reports.js";
+import vaccinesRouter from "./routes/vaccines.js";
 import { requireAuth } from "./middleware/auth.js";
 import { requirePetOwnership } from "./middleware/requirePetOwnership.js";
 
@@ -66,6 +67,7 @@ app.use("/api/pets/:petId/events",         requireAuth, requirePetOwnership, eve
 app.use("/api/pets/:petId/prescriptions",  requireAuth, requirePetOwnership, prescriptionsRouter);
 app.use("/api/pets/:petId/insights",       requireAuth, requirePetOwnership, insightsLimiter, insightsRouter);
 app.use("/api/pets/:petId/report",         reportsRouter);
+app.use("/api/pets/:petId/vaccines",       requireAuth, requirePetOwnership, vaccinesRouter);
 app.use("/api/pets", petsRouter);
 
 // ── Protected routes ───────────────────────────────────────────────────────
