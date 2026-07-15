@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle, Sparkles, List, SlidersHorizontal, X } from "lucide-react";
+import { CheckCircle, Sparkles, List, SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { getPets } from "../api/pets.js";
 import { logEvent, getEvents } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
@@ -231,6 +231,7 @@ export default function Log() {
 
   // ── Filter state ──────────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false);
+  const [eventsOpen, setEventsOpen]   = useState(false);
   const [filterType, setFilterType]   = useState("");
   const [filterFrom, setFilterFrom]   = useState("");
   const [filterTo, setFilterTo]       = useState("");
@@ -396,7 +397,9 @@ export default function Log() {
       </section>
 
       {selectedPetId && (
-        <>
+        <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+          {/* ── Left col: form area ──────────────────────────────────────── */}
+          <div>
           {/* ── Pet context banner ──────────────────────────────────────── */}
           {selectedPet && (
             <div className="flex items-center gap-2.5 bg-gradient-to-r from-[#F0EEF3] to-[#FFFFFF] border border-[#E2E0EB]/60 rounded-2xl px-3.5 py-2.5 mb-5">
@@ -548,7 +551,7 @@ export default function Log() {
               )}
 
               {/* When + Notes */}
-              <section className="mb-5 flex flex-col gap-3">
+              <section className="mb-5 grid gap-3 md:grid-cols-2">
                 <div>
                   <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
                     When?
@@ -592,118 +595,139 @@ export default function Log() {
               </button>
             </form>
           )}
-        </>
-      )}
+          </div>{/* end form area */}
 
-      {/* ── Recent events ─────────────────────────────────────────────────── */}
-      {selectedPetId && (
-        <section>
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em]">
-              {activeFilterCount > 0 ? "Events (filtered)" : "Recent events"}
-            </p>
-            <div className="flex items-center gap-2">
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 transition-colors"
-                >
-                  <X size={11} /> Clear
-                </button>
-              )}
+          {/* ── Right col: recent events (collapsible) ───────────────────── */}
+          <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm overflow-hidden">
+
+            {/* ── Toggle header ──────────────────────────────────────────── */}
+            <div className="flex items-center gap-2 px-4 py-3">
+              {/* Clickable title + count + chevron */}
               <button
-                onClick={() => setShowFilters((v) => !v)}
-                className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors active:scale-[0.97] duration-150 ${
-                  showFilters || activeFilterCount > 0
-                    ? "bg-[#3D3170] text-white border-[#3D3170]"
-                    : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
-                }`}
+                onClick={() => setEventsOpen((v) => !v)}
+                className="flex-1 flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
               >
-                <SlidersHorizontal size={12} strokeWidth={2} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="bg-white text-[#3D3170] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                    {activeFilterCount}
-                  </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+                <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em] flex-1">
+                  {activeFilterCount > 0 ? "Events (filtered)" : "Recent events"}
+                </p>
+                {!eventsLoading && events.length > 0 && (
+                  <span className="text-xs text-stone-400 mr-1">{events.length} logged</span>
                 )}
+                <ChevronDown
+                  size={14}
+                  className={`text-stone-400 transition-transform duration-200 ${eventsOpen ? "rotate-180" : ""}`}
+                />
               </button>
-            </div>
-          </div>
 
-          {/* Filter panel */}
-          {showFilters && (
-            <div className="bg-[#F5F4F7] border border-stone-200/60 rounded-xl p-4 mb-3 flex flex-col gap-3">
-              <div>
-                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">Type</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[{ value: "", label: "All" }, ...EVENT_TYPES.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setFilterType(value)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                        filterType === value
-                          ? "bg-[#3D3170] text-white border-[#3D3170]"
-                          : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">From</label>
-                  <input
-                    type="date"
-                    value={filterFrom}
-                    max={filterTo || undefined}
-                    onChange={(e) => setFilterFrom(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">To</label>
-                  <input
-                    type="date"
-                    value={filterTo}
-                    min={filterFrom || undefined}
-                    onChange={(e) => setFilterTo(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
+              {/* Filter button — always visible so users can search while closed */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 transition-colors"
+                  >
+                    <X size={11} /> Clear
+                  </button>
+                )}
+                <button
+                  onClick={() => { setShowFilters((v) => !v); setEventsOpen(true); }}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors active:scale-[0.97] duration-150 ${
+                    showFilters || activeFilterCount > 0
+                      ? "bg-[#3D3170] text-white border-[#3D3170]"
+                      : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
+                  }`}
+                >
+                  <SlidersHorizontal size={12} strokeWidth={2} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="bg-white text-[#3D3170] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
-          )}
 
-          {/* Events list */}
-          {eventsLoading ? (
-            <div className="space-y-2 pt-1">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-10 bg-stone-100 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : events.length === 0 ? (
-            <p className="text-sm text-stone-400 py-4 text-center">
-              {activeFilterCount > 0 ? "No events match these filters." : "No events yet for this pet."}
-            </p>
-          ) : (
-            <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm px-4 divide-y divide-stone-100">
-              {(activeFilterCount > 0 ? events.slice(0, 50) : events.slice(0, 10)).map((ev) => (
-                <EventItem key={ev._id} event={ev} />
-              ))}
-            </div>
-          )}
+            {/* ── Collapsible body ───────────────────────────────────────── */}
+            {eventsOpen && (
+              <div className="px-4 pb-4 border-t border-stone-100">
 
-          {events.length > (activeFilterCount > 0 ? 50 : 10) && (
-            <p className="text-xs text-stone-400 text-center mt-2">
-              Showing {activeFilterCount > 0 ? 50 : 10} of {events.length} events
-            </p>
-          )}
-        </section>
+                {/* Filter panel */}
+                {showFilters && (
+                  <div className="bg-[#F5F4F7] border border-stone-200/60 rounded-xl p-4 mt-3 mb-3 flex flex-col gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">Type</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ value: "", label: "All" }, ...EVENT_TYPES.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setFilterType(value)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                              filterType === value
+                                ? "bg-[#3D3170] text-white border-[#3D3170]"
+                                : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">From</label>
+                        <input
+                          type="date"
+                          value={filterFrom}
+                          max={filterTo || undefined}
+                          onChange={(e) => setFilterFrom(e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">To</label>
+                        <input
+                          type="date"
+                          value={filterTo}
+                          min={filterFrom || undefined}
+                          onChange={(e) => setFilterTo(e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Events list */}
+                {eventsLoading ? (
+                  <div className="space-y-2 pt-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-10 bg-stone-100 rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : events.length === 0 ? (
+                  <p className="text-sm text-stone-400 py-4 text-center">
+                    {activeFilterCount > 0 ? "No events match these filters." : "No events yet for this pet."}
+                  </p>
+                ) : (
+                  <div className="bg-[#F5F4F7] rounded-2xl mt-3 px-4 divide-y divide-stone-200/60">
+                    {(activeFilterCount > 0 ? events.slice(0, 50) : events.slice(0, 10)).map((ev) => (
+                      <EventItem key={ev._id} event={ev} />
+                    ))}
+                  </div>
+                )}
+
+                {events.length > (activeFilterCount > 0 ? 50 : 10) && (
+                  <p className="text-xs text-stone-400 text-center mt-2">
+                    Showing {activeFilterCount > 0 ? 50 : 10} of {events.length} events
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
       )}
     </div>
   );

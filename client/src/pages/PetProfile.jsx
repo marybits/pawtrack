@@ -337,6 +337,12 @@ export default function PetProfile() {
         Back
       </button>
 
+      {/* ── Desktop 2-col grid ──────────────────────────────────────────── */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+
+      {/* ── Left col: hero + stats ──────────────────────────────────────── */}
+      <div>
+
       {/* ── Hero header ───────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-b from-[#F0EEF3] to-[#FFFFFF] rounded-2xl border border-[#E2E0EB]/50 p-6 mb-4 text-center relative overflow-hidden">
         {/* Faint paw watermark */}
@@ -443,6 +449,11 @@ export default function PetProfile() {
           sub={lastEvent ? TYPE_META[lastEvent.type]?.label ?? lastEvent.type : "none yet"}
         />
       </div>
+
+      </div>{/* end left col */}
+
+      {/* ── Right col: detail cards ─────────────────────────────────────── */}
+      <div>
 
       {/* ── Active prescriptions ──────────────────────────────────────────── */}
       {activeRxs.length > 0 && (
@@ -713,6 +724,8 @@ export default function PetProfile() {
         </span>
         <ChevronRight size={14} className="text-stone-300" />
       </button>
+      </div>{/* end right col */}
+      </div>{/* end 2-col grid */}
     </div>
   );
 }

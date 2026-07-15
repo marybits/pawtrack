@@ -523,14 +523,14 @@ export default function Pets() {
       )}
 
       {/* ── List ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
+      <div className="grid gap-3 md:grid-cols-2">
         {loading ? (
           <>
             <PetSkeleton />
             <PetSkeleton />
           </>
         ) : pets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="md:col-span-2 flex flex-col items-center justify-center py-16 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#F0EEF3] flex items-center justify-center mb-4">
               <PawPrint size={26} strokeWidth={1.5} className="text-[#3D3170]" />
             </div>

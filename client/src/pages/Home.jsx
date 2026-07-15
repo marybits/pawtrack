@@ -303,7 +303,7 @@ export default function Home() {
 
       {/* ── Pet cards ────────────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-6">
           <Skeleton className="h-44" />
           <Skeleton className="h-44" />
         </div>
@@ -320,7 +320,7 @@ export default function Home() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-6">
           {pets.map((pet) => (
             <PetCard
               key={pet._id}
