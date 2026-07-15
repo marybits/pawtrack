@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle, Sparkles, List, SlidersHorizontal, X, ChevronDown } from "lucide-react";
+import { CheckCircle, Sparkles, List, SlidersHorizontal, X, ChevronDown, Pencil, Trash2, Check } from "lucide-react";
 import { getPets } from "../api/pets.js";
-import { logEvent, getEvents } from "../api/events.js";
+import { logEvent, getEvents, updateEvent, deleteEvent } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
 import NLEventInput from "../components/NLEventInput.jsx";
 import EventPreviewCard from "../components/EventPreviewCard.jsx";
+import DetailFields, { inputClass } from "../components/DetailFields.jsx";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const TYPE_CONFIG = {
@@ -52,143 +53,134 @@ function summarize(type, details = {}) {
   }
 }
 
-// ── Shared input style ─────────────────────────────────────────────────────
-const inputClass =
-  "w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors";
-
-// ── Detail fields per event type ───────────────────────────────────────────
-function DetailFields({ type, details, onChange }) {
-  function set(field) {
-    return (e) => onChange({ ...details, [field]: e.target.value });
-  }
-
-  switch (type) {
-    case "meal": {
-      const FINISHED_OPTS = [
-        { value: "all",     label: "Finished all" },
-        { value: "partial", label: "Left some"    },
-        { value: "refused", label: "Refused"      },
-      ];
-      return (
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-3 gap-2">
-            <input value={details.amount ?? ""} onChange={set("amount")} type="number" min="0" step="0.1" placeholder="Amount" className={inputClass} />
-            <input value={details.unit   ?? ""} onChange={set("unit")}   placeholder="cup / g / can"  className={inputClass} />
-            <input value={details.food   ?? ""} onChange={set("food")}   placeholder="Food name"      className={inputClass} />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-stone-400 shrink-0">Ate:</span>
-            {FINISHED_OPTS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => onChange({ ...details, finished: details.finished === value ? undefined : value })}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  details.finished === value
-                    ? "bg-amber-700 text-white border-amber-700"
-                    : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange({ ...details, askedForMore: !details.askedForMore })}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
-              details.askedForMore
-                ? "bg-[#F0EEF3] border-[#3D3170]/30 text-[#3C2E37]"
-                : "border-stone-200 text-stone-500 hover:border-stone-400"
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-[#3D3170]" : "bg-stone-300"}`} />
-            Pet asked for more food
-          </button>
-        </div>
-      );
-    }
-    case "medication":
-      return (
-        <div className="grid grid-cols-3 gap-2">
-          <input value={details.name ?? ""} onChange={set("name")} placeholder="Medication" className={`${inputClass} col-span-1`} />
-          <input value={details.dose ?? ""} onChange={set("dose")} type="number" min="0" step="0.1" placeholder="Dose" className={inputClass} />
-          <input value={details.unit ?? ""} onChange={set("unit")} placeholder="pill / ml" className={inputClass} />
-        </div>
-      );
-    case "activity":
-      return (
-        <div className="grid grid-cols-3 gap-2">
-          <input value={details.name     ?? ""} onChange={set("name")}     placeholder="Activity"   className={`${inputClass} col-span-1`} />
-          <input value={details.duration ?? ""} onChange={set("duration")} type="number" min="0" placeholder="Duration" className={inputClass} />
-          <input value={details.unit     ?? ""} onChange={set("unit")}     placeholder="min / hr"   className={inputClass} />
-        </div>
-      );
-    case "litter":
-      return (
-        <select value={details.action ?? ""} onChange={set("action")} className={inputClass}>
-          <option value="">Select action…</option>
-          <option value="scooped">Scooped</option>
-          <option value="cleaned">Full clean</option>
-          <option value="refilled">Refilled litter</option>
-        </select>
-      );
-    case "poop":
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <select value={details.consistency ?? ""} onChange={set("consistency")} className={inputClass}>
-            <option value="">Consistency…</option>
-            <option value="normal">Normal</option>
-            <option value="loose">Loose</option>
-            <option value="solid">Very solid</option>
-            <option value="liquid">Liquid</option>
-          </select>
-          <input value={details.color ?? ""} onChange={set("color")} placeholder="Color" className={inputClass} />
-        </div>
-      );
-    case "treats":
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <input value={details.name     ?? ""} onChange={set("name")}     placeholder="Treat name" className={inputClass} />
-          <input value={details.quantity ?? ""} onChange={set("quantity")} type="number" min="0" placeholder="Qty" className={inputClass} />
-        </div>
-      );
-    case "weight":
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            value={details.weightKg ?? ""}
-            onChange={set("weightKg")}
-            type="number"
-            min="0"
-            step="0.1"
-            placeholder="Weight"
-            className={inputClass}
-          />
-          <select value={details.unit ?? "kg"} onChange={set("unit")} className={inputClass}>
-            <option value="kg">kg</option>
-            <option value="lbs">lbs</option>
-          </select>
-        </div>
-      );
-    default:
-      return null;
-  }
-}
-
-// ── Event item row ─────────────────────────────────────────────────────────
-function EventItem({ event }) {
+// ── Event item row (with edit + delete) ────────────────────────────────────
+function EventItem({ event, petId, onUpdated, onDeleted }) {
   const cfg = TYPE_CONFIG[event.type];
   const summary = summarize(event.type, event.details);
+
+  const [mode, setMode]         = useState(null); // null | "edit" | "confirm-delete"
+  const [editDetails, setEditDetails] = useState({});
+  const [editNotes, setEditNotes]     = useState("");
+  const [editTime, setEditTime]       = useState("");
+  const [saving, setSaving]           = useState(false);
+
+  function openEdit() {
+    setEditDetails({ ...(event.details ?? {}) });
+    setEditNotes(event.notes ?? "");
+    // format occurredAt for datetime-local input
+    const d = new Date(event.occurredAt);
+    setEditTime(new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setMode("edit");
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const updated = await updateEvent(petId, event._id, {
+        details: editDetails,
+        notes: editNotes.trim() || null,
+        occurredAt: new Date(editTime).toISOString(),
+      });
+      onUpdated(updated);
+      setMode(null);
+    } catch (err) {
+      console.error("Update failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setSaving(true);
+    try {
+      await deleteEvent(petId, event._id);
+      onDeleted(event._id);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setSaving(false);
+    }
+  }
+
+  if (mode === "edit") {
+    return (
+      <div className="py-3 border-b border-stone-100 last:border-0 flex flex-col gap-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-semibold text-[#3D3170] capitalize">{cfg?.label ?? event.type}</span>
+          <button onClick={() => setMode(null)} className="text-xs text-stone-400 hover:text-stone-600 transition-colors">Cancel</button>
+        </div>
+        <DetailFields type={event.type} details={editDetails} onChange={setEditDetails} />
+        <input
+          value={editNotes}
+          onChange={(e) => setEditNotes(e.target.value)}
+          placeholder="Notes (optional)"
+          className={inputClass}
+        />
+        <input
+          type="datetime-local"
+          value={editTime}
+          max={new Date(new Date() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+          onChange={(e) => setEditTime(e.target.value)}
+          className={inputClass}
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-[#3D3170] hover:bg-[#2E2454] text-white text-xs font-semibold transition-colors disabled:opacity-50"
+        >
+          <Check size={13} />
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </div>
+    );
+  }
+
+  if (mode === "confirm-delete") {
+    return (
+      <div className="py-3 border-b border-stone-100 last:border-0 flex items-center gap-3">
+        <p className="text-xs text-stone-600 flex-1">Delete this {cfg?.label ?? event.type} event?</p>
+        <button
+          onClick={() => setMode(null)}
+          className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={saving}
+          className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saving ? "…" : "Delete"}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0">
+    <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0 group">
       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${cfg?.dot ?? "bg-stone-300"}`} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-stone-800 capitalize">{cfg?.label ?? event.type}</p>
         {summary && <p className="text-xs text-stone-500 truncate">{summary}</p>}
         {event.notes && <p className="text-xs text-stone-400 italic truncate">{event.notes}</p>}
       </div>
-      <span className="text-xs text-stone-400 shrink-0 pt-0.5">{formatOccurredAt(event.occurredAt)}</span>
+      <span className="text-xs text-stone-400 shrink-0 pt-0.5 mr-1">{formatOccurredAt(event.occurredAt)}</span>
+      {/* action buttons — visible on hover (desktop) or always on touch */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={openEdit}
+          className="p-1.5 rounded-lg text-stone-300 hover:text-[#3D3170] hover:bg-[#F0EEF3] transition-colors"
+          aria-label="Edit event"
+        >
+          <Pencil size={12} />
+        </button>
+        <button
+          onClick={() => setMode("confirm-delete")}
+          className="p-1.5 rounded-lg text-stone-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+          aria-label="Delete event"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -714,7 +706,13 @@ export default function Log() {
                 ) : (
                   <div className="bg-[#F5F4F7] rounded-2xl mt-3 px-4 divide-y divide-stone-200/60">
                     {(activeFilterCount > 0 ? events.slice(0, 50) : events.slice(0, 10)).map((ev) => (
-                      <EventItem key={ev._id} event={ev} />
+                      <EventItem
+                        key={ev._id}
+                        event={ev}
+                        petId={selectedPetId}
+                        onUpdated={(updated) => setEvents((prev) => prev.map((e) => e._id === updated._id ? updated : e))}
+                        onDeleted={(id) => setEvents((prev) => prev.filter((e) => e._id !== id))}
+                      />
                     ))}
                   </div>
                 )}

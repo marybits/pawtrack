@@ -4,13 +4,14 @@ import {
   ArrowLeft, PawPrint, Flame, Plus, Pill,
   Utensils, Activity, Scissors, Zap, Stethoscope, Calendar,
   Scale, ChevronRight, ChevronDown, Camera, Loader2, FileText,
-  Syringe, Trash2, Check,
+  Syringe, Trash2, Check, Pencil,
 } from "lucide-react";
 import { getPetById, uploadPetAvatar } from "../api/pets.js";
 import { apiFetchBlob } from "../api/apiClient.js";
-import { getEvents } from "../api/events.js";
+import { getEvents, updateEvent, deleteEvent } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
 import { getVaccines, createVaccine, deleteVaccine } from "../api/vaccines.js";
+import DetailFields, { inputClass } from "../components/DetailFields.jsx";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function daysAgo(n) {
@@ -158,20 +159,132 @@ function StatCard({ label, value, sub, accent = false }) {
   );
 }
 
-function EventRow({ event }) {
+function EventRow({ event, petId, onUpdated, onDeleted }) {
   const meta    = TYPE_META[event.type] ?? { label: event.type, Icon: Calendar, dot: "bg-stone-300" };
   const summary = summarize(event.type, event.details);
   const time    = new Date(event.occurredAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+  const [mode, setMode]               = useState(null); // null | "edit" | "confirm-delete"
+  const [editDetails, setEditDetails] = useState({});
+  const [editNotes, setEditNotes]     = useState("");
+  const [editTime, setEditTime]       = useState("");
+  const [saving, setSaving]           = useState(false);
+
+  function openEdit() {
+    setEditDetails({ ...(event.details ?? {}) });
+    setEditNotes(event.notes ?? "");
+    const d = new Date(event.occurredAt);
+    setEditTime(new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setMode("edit");
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const updated = await updateEvent(petId, event._id, {
+        details: editDetails,
+        notes: editNotes.trim() || null,
+        occurredAt: new Date(editTime).toISOString(),
+      });
+      onUpdated(updated);
+      setMode(null);
+    } catch (err) {
+      console.error("Update failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setSaving(true);
+    try {
+      await deleteEvent(petId, event._id);
+      onDeleted(event._id);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setSaving(false);
+    }
+  }
+
+  if (mode === "edit") {
+    return (
+      <div className="py-3 border-b border-stone-100 last:border-0 flex flex-col gap-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-semibold text-[#3D3170]">{meta.label}</span>
+          <button onClick={() => setMode(null)} className="text-xs text-stone-400 hover:text-stone-600 transition-colors">Cancel</button>
+        </div>
+        <DetailFields type={event.type} details={editDetails} onChange={setEditDetails} />
+        <input
+          value={editNotes}
+          onChange={(e) => setEditNotes(e.target.value)}
+          placeholder="Notes (optional)"
+          className={inputClass}
+        />
+        <input
+          type="datetime-local"
+          value={editTime}
+          max={new Date(new Date() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+          onChange={(e) => setEditTime(e.target.value)}
+          className={inputClass}
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-[#3D3170] hover:bg-[#2E2454] text-white text-xs font-semibold transition-colors disabled:opacity-50"
+        >
+          <Check size={13} />
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </div>
+    );
+  }
+
+  if (mode === "confirm-delete") {
+    return (
+      <div className="py-3 border-b border-stone-100 last:border-0 flex items-center gap-3">
+        <p className="text-xs text-stone-600 flex-1">Delete this {meta.label} event?</p>
+        <button
+          onClick={() => setMode(null)}
+          className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={saving}
+          className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saving ? "…" : "Delete"}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0">
+    <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0 group">
       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${meta.dot}`} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-stone-800">{meta.label}</p>
         {summary && <p className="text-xs text-stone-500 truncate">{summary}</p>}
         {event.notes && <p className="text-xs text-stone-400 italic truncate">{event.notes}</p>}
       </div>
-      <span className="text-xs text-stone-400 shrink-0 pt-0.5">{time}</span>
+      <span className="text-xs text-stone-400 shrink-0 pt-0.5 mr-1">{time}</span>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={openEdit}
+          className="p-1.5 rounded-lg text-stone-300 hover:text-[#3D3170] hover:bg-[#F0EEF3] transition-colors"
+          aria-label="Edit event"
+        >
+          <Pencil size={12} />
+        </button>
+        <button
+          onClick={() => setMode("confirm-delete")}
+          className="p-1.5 rounded-lg text-stone-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+          aria-label="Delete event"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -652,7 +765,13 @@ export default function PetProfile() {
                     {label}
                   </p>
                   {evs.map((ev) => (
-                    <EventRow key={ev._id} event={ev} />
+                    <EventRow
+                      key={ev._id}
+                      event={ev}
+                      petId={petId}
+                      onUpdated={(updated) => setEvents((prev) => prev.map((e) => e._id === updated._id ? updated : e))}
+                      onDeleted={(id) => setEvents((prev) => prev.filter((e) => e._id !== id))}
+                    />
                   ))}
                 </div>
               ))
