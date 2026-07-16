@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle, Sparkles, List, SlidersHorizontal, X, ChevronDown, Pencil, Trash2, Check } from "lucide-react";
+import { CheckCircle, Sparkles, List, SlidersHorizontal, X, ChevronDown, ChevronRight, Pencil, Trash2, Check } from "lucide-react";
 import { getPets } from "../api/pets.js";
 import { logEvent, getEvents, updateEvent, deleteEvent } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
@@ -221,6 +221,12 @@ export default function Log() {
   const [refreshKey, setRefreshKey]         = useState(0);
   const [prescriptions, setPrescriptions]   = useState([]);
 
+  // ── Prescription quick-confirm state ──────────────────────────────────
+  // rxConfirm: null | { rx, occurredAt, notes } — drives the confirm step
+  // manualMed: fallback flag to show manual fields when cards are available
+  const [rxConfirm, setRxConfirm]   = useState(null);
+  const [manualMed, setManualMed]   = useState(false);
+
   // ── Filter state ──────────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false);
   const [eventsOpen, setEventsOpen]   = useState(false);
@@ -301,11 +307,49 @@ export default function Log() {
     setNlError("");
   }
 
+  // ── Prescription confirm handlers ─────────────────────────────────────
+  async function handleRxConfirm() {
+    if (!selectedPetId || !rxConfirm) return;
+    if (new Date(rxConfirm.occurredAt) > new Date()) {
+      setError("The event time can't be in the future.");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    try {
+      const { rx } = rxConfirm;
+      await logEvent(selectedPetId, {
+        type: "medication",
+        details: {
+          name: rx.medicationName,
+          ...(rx.dose != null ? { dose: rx.dose }   : {}),
+          ...(rx.doseUnit     ? { unit: rx.doseUnit } : {}),
+        },
+        notes: rxConfirm.notes.trim() || undefined,
+        occurredAt: new Date(rxConfirm.occurredAt).toISOString(),
+      });
+      setRxConfirm(null);
+      setEventType(null);
+      setManualMed(false);
+      flashSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleRxCancel() {
+    setRxConfirm(null);
+  }
+
   // ── Structured form handlers ───────────────────────────────────────────
   function pickType(type) {
     setEventType(type);
     setDetails({});
     setError("");
+    setRxConfirm(null);
+    setManualMed(false);
   }
 
   function handleOccurredAtChange(e) {
@@ -344,7 +388,18 @@ export default function Log() {
     }
   }
 
-  const selectedPet = pets.find((p) => p._id === selectedPetId);
+  const selectedPet    = pets.find((p) => p._id === selectedPetId);
+  const availableTypes = selectedPet?.species === "cat"
+    ? EVENT_TYPES
+    : EVENT_TYPES.filter((t) => t !== "litter");
+
+  // Active prescriptions: active flag + within date range
+  const now = new Date();
+  const activePrescriptions = prescriptions.filter((rx) => {
+    const start = new Date(rx.startDate);
+    const end   = rx.endDate ? new Date(rx.endDate) : null;
+    return start <= now && (end === null || end >= now);
+  });
 
   return (
     <div>
@@ -374,7 +429,12 @@ export default function Log() {
             {pets.map((pet) => (
               <button
                 key={pet._id}
-                onClick={() => setSelectedPetId(pet._id)}
+                onClick={() => {
+                  setSelectedPetId(pet._id);
+                  if (pet.species !== "cat" && eventType === "litter") setEventType("");
+                  setRxConfirm(null);
+                  setManualMed(false);
+                }}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors active:scale-[0.97] duration-150 ${
                   selectedPetId === pet._id
                     ? "bg-[#3D3170] text-white border-[#3D3170]"
@@ -446,7 +506,65 @@ export default function Log() {
           {/* ── NL mode ─────────────────────────────────────────────────── */}
           {mode === "nl" && (
             <section className="mb-8">
-              {preview ? (
+              {rxConfirm ? (
+                /* ── Rx quick-confirm (NL path) ──────────────────────── */
+                <div className="rounded-2xl border border-rose-200 bg-[#FDF6F7] p-4 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-rose-700 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-stone-800">{rxConfirm.rx.medicationName}</p>
+                      {(rxConfirm.rx.dose != null || rxConfirm.rx.doseUnit) && (
+                        <p className="text-xs text-stone-500">
+                          {[rxConfirm.rx.dose, rxConfirm.rx.doseUnit].filter((v) => v != null && v !== "").join(" ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRxCancel}
+                      className="text-xs text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      When?
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={rxConfirm.occurredAt}
+                      max={toDateTimeLocal()}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, occurredAt: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      Notes <span className="normal-case text-stone-300">(optional)</span>
+                    </label>
+                    <input
+                      value={rxConfirm.notes}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, notes: e.target.value }))}
+                      placeholder="Anything else worth noting…"
+                      className={inputClass}
+                    />
+                  </div>
+                  {error && (
+                    <div className="rounded-xl bg-rose-100 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRxConfirm}
+                    disabled={submitting}
+                    className="w-full bg-rose-700 hover:bg-rose-800 text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                  >
+                    {submitting ? "Saving…" : "Confirm & Save"}
+                  </button>
+                </div>
+              ) : preview ? (
                 <EventPreviewCard
                   preview={preview}
                   onConfirm={handleConfirmPreview}
@@ -454,14 +572,33 @@ export default function Log() {
                   saving={saving}
                 />
               ) : (
-                <NLEventInput
-                  petName={selectedPet?.name}
-                  onParsed={handleParsed}
-                  onError={setNlError}
-                  disabled={saving}
-                />
+                <>
+                  <NLEventInput
+                    petName={selectedPet?.name}
+                    species={selectedPet?.species}
+                    onParsed={handleParsed}
+                    onError={setNlError}
+                    disabled={saving}
+                  />
+                  {/* ── Prescription quick-log chips ─────────────────── */}
+                  {activePrescriptions.length > 0 && (
+                    <div className="mt-2.5 flex items-center flex-wrap gap-1.5">
+                      <span className="text-xs text-stone-400 shrink-0">Quick log:</span>
+                      {activePrescriptions.map((rx) => (
+                        <button
+                          key={rx._id}
+                          type="button"
+                          onClick={() => setRxConfirm({ rx, occurredAt: toDateTimeLocal(), notes: "" })}
+                          className="px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 transition-colors active:scale-[0.97] duration-150"
+                        >
+                          {rx.medicationName}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
-              {nlError && (
+              {!rxConfirm && nlError && (
                 <div className="mt-3 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
                   {nlError}
                 </div>
@@ -479,7 +616,7 @@ export default function Log() {
                   What happened?
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  {EVENT_TYPES.map((type) => {
+                  {availableTypes.map((type) => {
                     const { label, dot } = TYPE_CONFIG[type];
                     const active = eventType === type;
                     return (
@@ -502,89 +639,165 @@ export default function Log() {
               </section>
 
               {/* Per-type detail fields */}
-              {eventType && (
+              {eventType && !rxConfirm && (
                 <section className="mb-5">
-                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
-                    Details
-                  </p>
-
-                  {/* Prescription quick-select */}
-                  {eventType === "medication" && prescriptions.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {prescriptions.map((rx) => {
-                        const active = details.name === rx.medicationName;
-                        return (
+                  {eventType === "medication" && activePrescriptions.length > 0 && !manualMed ? (
+                    /* ── Prescription card picker ─────────────────────── */
+                    <>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        Active prescriptions
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {activePrescriptions.map((rx) => (
                           <button
                             key={rx._id}
                             type="button"
-                            onClick={() =>
-                              setDetails((d) => ({
-                                ...d,
-                                name: rx.medicationName,
-                                ...(rx.dose     != null ? { dose: rx.dose }     : {}),
-                                ...(rx.doseUnit         ? { unit: rx.doseUnit } : {}),
-                              }))
-                            }
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                              active
-                                ? "bg-rose-700 text-white border-rose-700"
-                                : "bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400"
-                            }`}
+                            onClick={() => setRxConfirm({ rx, occurredAt: toDateTimeLocal(), notes: "" })}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 text-left transition-colors active:scale-[0.98] duration-150"
                           >
-                            {rx.medicationName}
+                            <span className="w-2 h-2 rounded-full bg-rose-700 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-stone-800">{rx.medicationName}</p>
+                              {(rx.dose != null || rx.doseUnit) && (
+                                <p className="text-xs text-stone-500">
+                                  {[rx.dose, rx.doseUnit].filter((v) => v != null && v !== "").join(" ")}
+                                </p>
+                              )}
+                            </div>
+                            <ChevronRight size={14} className="text-rose-400 shrink-0" />
                           </button>
-                        );
-                      })}
-                    </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setManualMed(true)}
+                        className="mt-2.5 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                      >
+                        Log a one-off medication instead →
+                      </button>
+                    </>
+                  ) : (
+                    /* ── Standard detail fields ───────────────────────── */
+                    <>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        Details
+                      </p>
+                      <DetailFields type={eventType} details={details} onChange={setDetails} />
+                    </>
                   )}
-
-                  <DetailFields type={eventType} details={details} onChange={setDetails} />
                 </section>
               )}
 
-              {/* When + Notes */}
-              <section className="mb-5 grid gap-3 md:grid-cols-2">
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
-                    When?
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={occurredAt}
-                    max={toDateTimeLocal()}
-                    onChange={handleOccurredAtChange}
-                    className={`${inputClass} ${dateError ? "border-rose-400 focus:ring-rose-400/30 focus:border-rose-400" : ""}`}
-                  />
-                  {dateError && (
-                    <p className="mt-1.5 text-xs text-rose-600">{dateError}</p>
+              {/* ── Rx quick-confirm ─────────────────────────────────────── */}
+              {rxConfirm && (
+                <div className="mb-5 rounded-2xl border border-rose-200 bg-[#FDF6F7] p-4 flex flex-col gap-4">
+                  {/* Medication header */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-rose-700 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-stone-800">{rxConfirm.rx.medicationName}</p>
+                      {(rxConfirm.rx.dose != null || rxConfirm.rx.doseUnit) && (
+                        <p className="text-xs text-stone-500">
+                          {[rxConfirm.rx.dose, rxConfirm.rx.doseUnit].filter((v) => v != null && v !== "").join(" ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRxCancel}
+                      className="text-xs text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  {/* When */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      When?
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={rxConfirm.occurredAt}
+                      max={toDateTimeLocal()}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, occurredAt: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      Notes <span className="normal-case text-stone-300">(optional)</span>
+                    </label>
+                    <input
+                      value={rxConfirm.notes}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, notes: e.target.value }))}
+                      placeholder="Anything else worth noting…"
+                      className={inputClass}
+                    />
+                  </div>
+                  {error && (
+                    <div className="rounded-xl bg-rose-100 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
                   )}
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
-                    Notes <span className="normal-case text-stone-300">(optional)</span>
-                  </label>
-                  <input
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Anything else worth noting…"
-                    className={inputClass}
-                  />
-                </div>
-              </section>
-
-              {error && (
-                <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
-                  {error}
+                  <button
+                    type="button"
+                    onClick={handleRxConfirm}
+                    disabled={submitting}
+                    className="w-full bg-rose-700 hover:bg-rose-800 text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                  >
+                    {submitting ? "Saving…" : "Confirm & Save"}
+                  </button>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting || !eventType || !!dateError}
-                className="w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
-              >
-                {submitting ? "Saving…" : "Log event"}
-              </button>
+              {/* When + Notes + submit — hidden when the Rx confirm card is showing */}
+              {!rxConfirm && (
+                <>
+                  <section className="mb-5 grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        When?
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={occurredAt}
+                        max={toDateTimeLocal()}
+                        onChange={handleOccurredAtChange}
+                        className={`${inputClass} ${dateError ? "border-rose-400 focus:ring-rose-400/30 focus:border-rose-400" : ""}`}
+                      />
+                      {dateError && (
+                        <p className="mt-1.5 text-xs text-rose-600">{dateError}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        Notes <span className="normal-case text-stone-300">(optional)</span>
+                      </label>
+                      <input
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Anything else worth noting…"
+                        className={inputClass}
+                      />
+                    </div>
+                  </section>
+
+                  {error && (
+                    <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !eventType || !!dateError}
+                    className="w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                  >
+                    {submitting ? "Saving…" : "Log event"}
+                  </button>
+                </>
+              )}
             </form>
           )}
           </div>{/* end form area */}
@@ -651,7 +864,7 @@ export default function Log() {
                     <div>
                       <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">Type</p>
                       <div className="flex flex-wrap gap-1.5">
-                        {[{ value: "", label: "All" }, ...EVENT_TYPES.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
+                        {[{ value: "", label: "All" }, ...availableTypes.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
                           <button
                             key={value}
                             type="button"

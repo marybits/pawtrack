@@ -10,7 +10,7 @@ import { parseEventFromText } from "../services/geminiService.js";
  * POST /api/pets/:petId/events to actually persist the confirmed event.
  */
 export async function parseEvent(req, res) {
-  const { text, petName, timezone } = req.body;
+  const { text, petName, timezone, species } = req.body;
 
   if (!text || typeof text !== "string" || !text.trim()) {
     return res.status(400).json({ message: "text is required" });
@@ -30,12 +30,17 @@ export async function parseEvent(req, res) {
     ? petName.trim()
     : undefined;
 
+  // Sanitize species — only trust short alpha strings.
+  const safeSpecies = (typeof species === "string" && /^[a-zA-Z]{1,30}$/.test(species.trim()))
+    ? species.trim().toLowerCase()
+    : undefined;
+
   if (!process.env.GEMINI_API_KEY) {
     return res.status(503).json({ message: "AI parsing is not configured on this server." });
   }
 
   try {
-    const preview = await parseEventFromText(text.trim(), safePetName, safeTz);
+    const preview = await parseEventFromText(text.trim(), safePetName, safeTz, safeSpecies);
     return res.status(200).json(preview);
   } catch (err) {
     console.error("[gemini] parse error:", err.message);

@@ -6,12 +6,13 @@ export const logEvent = (petId, data) =>
     body: JSON.stringify(data),
   });
 
-export const parseEvent = (text, petName) =>
+export const parseEvent = (text, petName, species) =>
   apiFetch("/api/events/parse", {
     method: "POST",
     body: JSON.stringify({
       text,
       petName,
+      species,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
