@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { createUser, findByUsername } from "../services/usersService.js";
+import { createUser, findByUsername, verifyPassword } from "../services/usersService.js";
 
 function signToken(userId) {
   return jwt.sign({ userId: String(userId) }, process.env.JWT_SECRET, {
@@ -47,7 +47,8 @@ export async function login(req, res) {
 
   try {
     const user = await findByUsername(username);
-    if (!user || user.password !== password) {
+    const valid = user && await verifyPassword(password, user.password);
+    if (!valid) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 

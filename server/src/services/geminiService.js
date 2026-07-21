@@ -197,7 +197,7 @@ export async function parseEventFromText(text, petName, timezone, species) {
   let response;
   try {
     response = await getClient().models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-3.6-flash",
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -392,7 +392,7 @@ export async function generateHealthInsights(petName, species, events, prescript
   }
 
   const response = await getClient().models.generateContent({
-    model: "gemini-3.5-flash",
+    model: "gemini-3.6-flash",
     contents: `Analyze and generate health insights for this pet's 30-day care data:\n\n${summary}`,
     config: {
       systemInstruction: INSIGHTS_SYSTEM,
