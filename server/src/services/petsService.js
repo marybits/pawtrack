@@ -17,3 +17,7 @@ export async function findPetById(petId) {
 export async function updatePetAvatar(petId, avatarUrl) {
   return Pet.findByIdAndUpdate(petId, { avatarUrl }, { new: true });
 }
+
+export async function updatePet(petId, updates) {
+  return Pet.findByIdAndUpdate(petId, { $set: updates }, { new: true, runValidators: true });
+}

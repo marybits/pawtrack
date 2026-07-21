@@ -20,6 +20,8 @@ CHAIN-OF-THOUGHT FOR NUMBERS — apply this reasoning for every message:
     → type='activity' → durationMin MUST be 30, unit MUST be 'min', name='walk'
   "Luna ate half a cup of kibble at 7am"
     → type='meal' → amount MUST be 0.5, unit MUST be 'cup', food='kibble', finished=null (not mentioned)
+  "Scooby ate half a bowl of dry kibble"
+    → type='meal' → amount MUST be 0.5, unit MUST be 'bowl', food='dry kibble', finished=null (not mentioned)
   "Max wolfed down his food and kept begging for more"
     → type='meal' → finished='all', askedForMore=true
   "Charlie only ate half his bowl and walked away"
@@ -63,7 +65,7 @@ const DETAILS_BRANCHES = {
     description: "Use this branch when type='meal'.",
     properties: {
       amount:      { type: Type.NUMBER,  nullable: true, description: "Numeric quantity (e.g. 0.5, 1, 2)." },
-      unit:        { type: Type.STRING,  nullable: true, enum: ["cup", "cups", "g", "oz", "can", "serving"] },
+      unit:        { type: Type.STRING,  nullable: true, enum: ["cup", "cups", "g", "oz", "can", "serving", "bowl"] },
       food:        { type: Type.STRING,  nullable: true, description: "Food name, e.g. 'kibble', 'wet food'." },
       finished:    { type: Type.STRING,  nullable: true, enum: ["all", "partial", "refused"],
                      description: "'all' if pet finished everything, 'partial' if left some, 'refused' if did not eat. Null if not mentioned." },
@@ -191,21 +193,49 @@ export async function parseEventFromText(text, petName, timezone, species) {
     (subject ? `${subject}\n` : "") +
     `User message: """${text}"""`;
 
-  const response = await getClient().models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: prompt,
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema,
-    },
-  });
+  // Stage 1: API call — catch quota / network / server errors before touching response.
+  let response;
+  try {
+    response = await getClient().models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema,
+      },
+    });
+  } catch (apiErr) {
+    const msg = apiErr.message ?? "";
+    const isQuota =
+      msg.includes("429") ||
+      msg.includes("RESOURCE_EXHAUSTED") ||
+      msg.includes("quota");
+    const wrapped = new Error(
+      isQuota ? `Gemini quota exceeded: ${msg}` : `Gemini API error: ${msg}`
+    );
+    wrapped.code = isQuota ? "QUOTA_EXCEEDED" : "API_ERROR";
+    throw wrapped;
+  }
 
+  // Stage 2: access response.text — the SDK getter throws on blocked/empty responses.
+  let rawText;
+  try {
+    rawText = response.text;
+  } catch (textErr) {
+    const wrapped = new Error(`Gemini returned no usable text: ${textErr.message}`);
+    wrapped.code = "API_ERROR";
+    throw wrapped;
+  }
+
+  // Stage 3: JSON parse — only reached when we have a real text payload.
   let parsed;
   try {
-    parsed = JSON.parse(response.text);
+    parsed = JSON.parse(rawText);
   } catch {
-    throw new Error(`Gemini returned non-JSON: ${response.text}`);
+    const wrapped = new Error(`Gemini returned non-JSON: ${rawText}`);
+    wrapped.code = "PARSE_ERROR";
+    throw wrapped;
   }
 
   // Clamp occurredAt to now if model produced a future time.
@@ -362,7 +392,7 @@ export async function generateHealthInsights(petName, species, events, prescript
   }
 
   const response = await getClient().models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     contents: `Analyze and generate health insights for this pet's 30-day care data:\n\n${summary}`,
     config: {
       systemInstruction: INSIGHTS_SYSTEM,

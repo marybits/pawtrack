@@ -8,7 +8,7 @@ beforeAll(async () => {
 afterEach(async () => {
   // Wipe every collection between tests so each test starts fresh
   const collections = mongoose.connection.collections;
-  for (const key in collections) {
+  for (const key of Object.keys(collections)) {
     await collections[key].deleteMany({});
   }
 });

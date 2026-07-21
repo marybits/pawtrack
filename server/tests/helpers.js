@@ -28,5 +28,6 @@ export async function createPet(token, overrides = {}) {
     .post("/api/pets")
     .set("Authorization", `Bearer ${token}`)
     .send({ name: "Buddy", species: "dog", breed: "Labrador", age: 3, ...overrides });
+
   return res.body;
 }

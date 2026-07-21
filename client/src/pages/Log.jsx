@@ -570,6 +570,7 @@ export default function Log() {
                   onConfirm={handleConfirmPreview}
                   onCancel={handleCancelPreview}
                   saving={saving}
+                  species={selectedPet?.species}
                 />
               ) : (
                 <>

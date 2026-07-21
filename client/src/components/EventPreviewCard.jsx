@@ -140,7 +140,10 @@ function DetailFields({ type, details, onChange }) {
  *   onCancel  – called when user clicks "Cancel"
  *   saving    – boolean, disables confirm button while parent is persisting
  */
-export default function EventPreviewCard({ preview, onConfirm, onCancel, saving }) {
+export default function EventPreviewCard({ preview, onConfirm, onCancel, saving, species }) {
+  const availableTypes = (species ?? "").toLowerCase() === "cat"
+    ? EVENT_TYPES
+    : EVENT_TYPES.filter((t) => t !== "litter");
   const [type, setType]             = useState(preview.type);
   const [occurredAt, setOccurredAt] = useState(toDateTimeLocal(preview.occurredAt));
   const [details, setDetails]       = useState(preview.details ?? {});
@@ -179,7 +182,7 @@ export default function EventPreviewCard({ preview, onConfirm, onCancel, saving 
             Event type
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {EVENT_TYPES.map((t) => {
+            {availableTypes.map((t) => {
               const c = TYPE_CONFIG[t];
               const active = type === t;
               return (
