@@ -39,3 +39,28 @@ export async function findEventsByPet(petId, { type, from, to } = {}) {
 
   return Event.find(filter).sort({ occurredAt: -1 });
 }
+
+/**
+ * Update allowed fields on a single event, scoped to petId for ownership safety.
+ * Returns the updated document, or null if not found / wrong owner.
+ */
+export async function updateEvent(eventId, petId, { type, details, notes, occurredAt }) {
+  const patch = {};
+  if (type       !== undefined) patch.type       = type;
+  if (details    !== undefined) patch.details    = details;
+  if (notes      !== undefined) patch.notes      = notes;
+  if (occurredAt !== undefined) patch.occurredAt = new Date(occurredAt);
+
+  return Event.findOneAndUpdate(
+    { _id: eventId, petId },
+    { $set: patch },
+    { new: true, runValidators: true }
+  );
+}
+
+/**
+ * Delete a single event scoped to petId. Returns the deleted doc or null.
+ */
+export async function deleteEvent(eventId, petId) {
+  return Event.findOneAndDelete({ _id: eventId, petId });
+}

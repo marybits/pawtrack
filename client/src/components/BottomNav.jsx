@@ -71,7 +71,7 @@ function LogTab() {
 
 export default function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
       <div className="bg-[#FFFFFF] border-t border-stone-200/70 shadow-[0_-1px_0_0_rgba(0,0,0,0.04)]">
         <div className="max-w-md mx-auto flex items-end h-16">
           <SideTab to="/home"    label="Home"    Icon={Home}      />

@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { createUser, findByUsername } from "../services/usersService.js";
+import { createUser, findByUsername, verifyPassword } from "../services/usersService.js";
 
 function signToken(userId) {
   return jwt.sign({ userId: String(userId) }, process.env.JWT_SECRET, {
@@ -14,6 +14,10 @@ export async function register(req, res) {
     return res
       .status(400)
       .json({ message: "username, email, and password are required" });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
   }
 
   try {
@@ -34,7 +38,7 @@ export async function register(req, res) {
       const message = Object.values(err.errors)[0].message;
       return res.status(400).json({ message });
     }
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -47,7 +51,8 @@ export async function login(req, res) {
 
   try {
     const user = await findByUsername(username);
-    if (!user || user.password !== password) {
+    const valid = user && await verifyPassword(password, user.password);
+    if (!valid) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
@@ -57,6 +62,6 @@ export async function login(req, res) {
       user: { id: user._id, username: user.username, email: user.email },
     });
   } catch (err) {
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }

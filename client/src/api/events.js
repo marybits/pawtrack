@@ -6,12 +6,13 @@ export const logEvent = (petId, data) =>
     body: JSON.stringify(data),
   });
 
-export const parseEvent = (text, petName) =>
+export const parseEvent = (text, petName, species) =>
   apiFetch("/api/events/parse", {
     method: "POST",
     body: JSON.stringify({
       text,
       petName,
+      species,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     }),
   });
@@ -22,3 +23,12 @@ export const getEvents = (petId, params = {}) => {
   ).toString();
   return apiFetch(`/api/pets/${petId}/events${qs ? `?${qs}` : ""}`);
 };
+
+export const updateEvent = (petId, eventId, data) =>
+  apiFetch(`/api/pets/${petId}/events/${eventId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+
+export const deleteEvent = (petId, eventId) =>
+  apiFetch(`/api/pets/${petId}/events/${eventId}`, { method: "DELETE" });

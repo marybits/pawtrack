@@ -6,7 +6,7 @@ import { parseEvent } from "../api/events.js";
  * Free-text input that calls Gemini via the /api/events/parse endpoint.
  * Calls onParsed(preview) on success, onError(message) on failure.
  */
-export default function NLEventInput({ petName, onParsed, onError, disabled }) {
+export default function NLEventInput({ petName, species, onParsed, onError, disabled }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +16,7 @@ export default function NLEventInput({ petName, onParsed, onError, disabled }) {
     setLoading(true);
     onError("");
     try {
-      const preview = await parseEvent(text.trim(), petName);
+      const preview = await parseEvent(text.trim(), petName, species);
       onParsed(preview, text.trim());
       setText("");
     } catch (err) {
