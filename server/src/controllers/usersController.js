@@ -16,6 +16,10 @@ export async function register(req, res) {
       .json({ message: "username, email, and password are required" });
   }
 
+  if (password.length < 6) {
+    return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
   try {
     const user = await createUser(username, email, password);
     const token = signToken(user._id);
@@ -34,7 +38,7 @@ export async function register(req, res) {
       const message = Object.values(err.errors)[0].message;
       return res.status(400).json({ message });
     }
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
@@ -58,6 +62,6 @@ export async function login(req, res) {
       user: { id: user._id, username: user.username, email: user.email },
     });
   } catch (err) {
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
