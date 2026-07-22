@@ -128,7 +128,7 @@ function resizeImage(file, maxPx = 256) {
 function vaccineStatus(nextDue) {
   if (!nextDue) return null;
   const days = Math.ceil((new Date(nextDue) - Date.now()) / 86400000);
-  if (days < 0)   return { label: "Overdue",  color: "bg-red-100 text-red-700"   };
+  if (days <= 0)  return { label: "Overdue",  color: "bg-red-100 text-red-700"   };
   if (days <= 30) return { label: "Due soon", color: "bg-amber-100 text-amber-700" };
   return           { label: "Up to date", color: "bg-green-100 text-green-700" };
 }
@@ -318,6 +318,7 @@ export default function PetProfile() {
   const [editingVaccineId, setEditingVaccineId]   = useState(null);
   const [editVaccineForm, setEditVaccineForm]     = useState({});
   const [savingVaccine, setSavingVaccine]         = useState(false);
+  const [vaccineError, setVaccineError]           = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]           = useState(false);
   const fileInputRef                    = useRef(null);
@@ -401,6 +402,7 @@ export default function PetProfile() {
   }
 
   function startEditVaccine(v) {
+    setVaccineError(null);
     setEditingVaccineId(v._id);
     setEditVaccineForm({
       name:      v.name      ?? "",
@@ -414,6 +416,7 @@ export default function PetProfile() {
   async function handleSaveVaccine(e) {
     e.preventDefault();
     if (!editVaccineForm.name.trim()) return;
+    setVaccineError(null);
     setSavingVaccine(true);
     try {
       const updated = await updateVaccine(petId, editingVaccineId, editVaccineForm);
@@ -429,6 +432,7 @@ export default function PetProfile() {
       setEditingVaccineId(null);
     } catch (err) {
       console.error("Update vaccine failed:", err);
+      setVaccineError(err.message || "Save failed — please try again.");
     } finally {
       setSavingVaccine(false);
     }
@@ -733,6 +737,9 @@ export default function PetProfile() {
                           onChange={(e) => setEditVaccineForm((f) => ({ ...f, notes: e.target.value }))}
                           className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
                         />
+                        {vaccineError && (
+                          <p className="text-xs text-red-500 px-1">{vaccineError}</p>
+                        )}
                         <div className="flex gap-2 mt-1">
                           <button
                             type="button"
