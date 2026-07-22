@@ -272,7 +272,7 @@ export default function Home() {
     navigate(`/pets/${petId}`);
   }
 
-  // Cross-pet today feed
+  // Cross-pet today feed — guarantee ≥1 slot per pet, fill remaining by recency
   const todayFeed = [];
   const today = new Date();
   pets.forEach((pet) => {
@@ -282,7 +282,24 @@ export default function Home() {
       .forEach((e) => todayFeed.push({ ...e, petName: pet.name }));
   });
   todayFeed.sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
-  const recentFeed = todayFeed.slice(0, 6);
+
+  const FEED_LIMIT = Math.max(8, pets.length * 4);
+  const seenPets = new Set();
+  const recentFeed = [];
+  // Pass 1: one slot per pet (their most recent event)
+  for (const e of todayFeed) {
+    if (!seenPets.has(e.petName)) {
+      seenPets.add(e.petName);
+      recentFeed.push(e);
+    }
+  }
+  // Pass 2: fill remaining slots by recency
+  const guaranteedIds = new Set(recentFeed.map((e) => e._id));
+  for (const e of todayFeed) {
+    if (recentFeed.length >= FEED_LIMIT) break;
+    if (!guaranteedIds.has(e._id)) recentFeed.push(e);
+  }
+  recentFeed.sort((a, b) => new Date(b.occurredAt) - new Date(a.occurredAt));
 
   return (
     <div>
