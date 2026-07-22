@@ -1,6 +1,10 @@
 # Project docs folder — not committed until ready to share
 docs/
 
+# Course deliverable files (kept locally, not in repo)
+prompt_engineering_log.docx
+prompt_engineering_log_verbatim.txt
+
 # Logs
 logs
 *.log
