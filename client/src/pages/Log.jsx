@@ -63,6 +63,7 @@ function EventItem({ event, petId, onUpdated, onDeleted }) {
   const [editNotes, setEditNotes]     = useState("");
   const [editTime, setEditTime]       = useState("");
   const [saving, setSaving]           = useState(false);
+  const [saveError, setSaveError]     = useState(null);
 
   function openEdit() {
     setEditDetails({ ...(event.details ?? {}) });
@@ -70,21 +71,24 @@ function EventItem({ event, petId, onUpdated, onDeleted }) {
     // format occurredAt for datetime-local input
     const d = new Date(event.occurredAt);
     setEditTime(new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setSaveError(null);
     setMode("edit");
   }
 
   async function handleSave() {
+    setSaveError(null);
     setSaving(true);
     try {
       const updated = await updateEvent(petId, event._id, {
         details: editDetails,
-        notes: editNotes.trim() || null,
+        notes: editNotes.trim() || undefined,
         occurredAt: new Date(editTime).toISOString(),
       });
       onUpdated(updated);
       setMode(null);
     } catch (err) {
       console.error("Update failed:", err);
+      setSaveError(err.message || "Save failed — please try again.");
     } finally {
       setSaving(false);
     }
@@ -122,6 +126,9 @@ function EventItem({ event, petId, onUpdated, onDeleted }) {
           onChange={(e) => setEditTime(e.target.value)}
           className={inputClass}
         />
+        {saveError && (
+          <p className="text-xs text-red-500 px-1">{saveError}</p>
+        )}
         <button
           onClick={handleSave}
           disabled={saving}

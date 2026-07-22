@@ -10,7 +10,7 @@ import { getPetById, uploadPetAvatar, deletePet } from "../api/pets.js";
 import { apiFetchBlob } from "../api/apiClient.js";
 import { getEvents, updateEvent, deleteEvent } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
-import { getVaccines, createVaccine, deleteVaccine } from "../api/vaccines.js";
+import { getVaccines, createVaccine, updateVaccine, deleteVaccine } from "../api/vaccines.js";
 import DetailFields, { inputClass } from "../components/DetailFields.jsx";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -169,27 +169,31 @@ function EventRow({ event, petId, onUpdated, onDeleted }) {
   const [editNotes, setEditNotes]     = useState("");
   const [editTime, setEditTime]       = useState("");
   const [saving, setSaving]           = useState(false);
+  const [saveError, setSaveError]     = useState(null);
 
   function openEdit() {
     setEditDetails({ ...(event.details ?? {}) });
     setEditNotes(event.notes ?? "");
     const d = new Date(event.occurredAt);
     setEditTime(new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setSaveError(null);
     setMode("edit");
   }
 
   async function handleSave() {
+    setSaveError(null);
     setSaving(true);
     try {
       const updated = await updateEvent(petId, event._id, {
         details: editDetails,
-        notes: editNotes.trim() || null,
+        notes: editNotes.trim() || undefined,
         occurredAt: new Date(editTime).toISOString(),
       });
       onUpdated(updated);
       setMode(null);
     } catch (err) {
       console.error("Update failed:", err);
+      setSaveError(err.message || "Save failed — please try again.");
     } finally {
       setSaving(false);
     }
@@ -227,6 +231,9 @@ function EventRow({ event, petId, onUpdated, onDeleted }) {
           onChange={(e) => setEditTime(e.target.value)}
           className={inputClass}
         />
+        {saveError && (
+          <p className="text-xs text-red-500 px-1">{saveError}</p>
+        )}
         <button
           onClick={handleSave}
           disabled={saving}
@@ -308,6 +315,9 @@ export default function PetProfile() {
   const [vaccineForm, setVaccineForm]   = useState({ name: "", lastGiven: "", nextDue: "", notes: "", clinic: "" });
   const [addingVaccine, setAddingVaccine] = useState(false);
   const [showVaccineForm, setShowVaccineForm] = useState(false);
+  const [editingVaccineId, setEditingVaccineId]   = useState(null);
+  const [editVaccineForm, setEditVaccineForm]     = useState({});
+  const [savingVaccine, setSavingVaccine]         = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting]           = useState(false);
   const fileInputRef                    = useRef(null);
@@ -387,6 +397,40 @@ export default function PetProfile() {
       setVaccines((prev) => prev.filter((v) => v._id !== vaccineId));
     } catch (err) {
       console.error("Delete vaccine failed:", err);
+    }
+  }
+
+  function startEditVaccine(v) {
+    setEditingVaccineId(v._id);
+    setEditVaccineForm({
+      name:      v.name      ?? "",
+      lastGiven: v.lastGiven ? v.lastGiven.slice(0, 10) : "",
+      nextDue:   v.nextDue   ? v.nextDue.slice(0, 10)   : "",
+      clinic:    v.clinic    ?? "",
+      notes:     v.notes     ?? "",
+    });
+  }
+
+  async function handleSaveVaccine(e) {
+    e.preventDefault();
+    if (!editVaccineForm.name.trim()) return;
+    setSavingVaccine(true);
+    try {
+      const updated = await updateVaccine(petId, editingVaccineId, editVaccineForm);
+      setVaccines((prev) =>
+        prev.map((v) => (v._id === editingVaccineId ? updated : v))
+            .sort((a, b) => {
+              if (!a.nextDue && !b.nextDue) return 0;
+              if (!a.nextDue) return 1;
+              if (!b.nextDue) return -1;
+              return new Date(a.nextDue) - new Date(b.nextDue);
+            })
+      );
+      setEditingVaccineId(null);
+    } catch (err) {
+      console.error("Update vaccine failed:", err);
+    } finally {
+      setSavingVaccine(false);
     }
   }
 
@@ -641,6 +685,76 @@ export default function PetProfile() {
               <div className="flex flex-col gap-2 mb-3">
                 {vaccines.map((v) => {
                   const status = vaccineStatus(v.nextDue);
+
+                  // ── Inline edit form ──────────────────────────────────────
+                  if (editingVaccineId === v._id) {
+                    return (
+                      <form
+                        key={v._id}
+                        onSubmit={handleSaveVaccine}
+                        className="bg-[#F5F4F7] rounded-xl p-3 flex flex-col gap-2"
+                      >
+                        <input
+                          required
+                          placeholder="Vaccine name"
+                          value={editVaccineForm.name}
+                          onChange={(e) => setEditVaccineForm((f) => ({ ...f, name: e.target.value }))}
+                          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[10px] text-stone-400 uppercase tracking-wide mb-1 block">Last given</label>
+                            <input
+                              type="date"
+                              value={editVaccineForm.lastGiven}
+                              onChange={(e) => setEditVaccineForm((f) => ({ ...f, lastGiven: e.target.value }))}
+                              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#3D3170]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-stone-400 uppercase tracking-wide mb-1 block">Next due</label>
+                            <input
+                              type="date"
+                              value={editVaccineForm.nextDue}
+                              onChange={(e) => setEditVaccineForm((f) => ({ ...f, nextDue: e.target.value }))}
+                              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:outline-none focus:border-[#3D3170]"
+                            />
+                          </div>
+                        </div>
+                        <input
+                          placeholder="Clinic (optional)"
+                          value={editVaccineForm.clinic}
+                          onChange={(e) => setEditVaccineForm((f) => ({ ...f, clinic: e.target.value }))}
+                          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
+                        />
+                        <input
+                          placeholder="Notes (optional)"
+                          value={editVaccineForm.notes}
+                          onChange={(e) => setEditVaccineForm((f) => ({ ...f, notes: e.target.value }))}
+                          className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:border-[#3D3170]"
+                        />
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingVaccineId(null)}
+                            className="flex-1 py-2 rounded-xl text-sm font-semibold text-stone-500 bg-white border border-stone-200 hover:bg-stone-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={savingVaccine}
+                            className="flex-1 py-2 rounded-xl text-sm font-semibold text-white bg-[#3D3170] hover:bg-[#2E2454] disabled:opacity-60 transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            {savingVaccine ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                            Save
+                          </button>
+                        </div>
+                      </form>
+                    );
+                  }
+
+                  // ── Display row ───────────────────────────────────────────
                   return (
                     <div key={v._id} className="flex items-center gap-3 bg-[#F5F4F7] rounded-xl px-3 py-2.5">
                       <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
@@ -663,6 +777,13 @@ export default function PetProfile() {
                         </p>
                         {v.notes && <p className="text-xs text-stone-400 italic truncate">{v.notes}</p>}
                       </div>
+                      <button
+                        onClick={() => startEditVaccine(v)}
+                        className="p-1.5 rounded-lg hover:bg-violet-50 text-stone-300 hover:text-violet-600 transition-colors shrink-0"
+                        aria-label="Edit vaccine"
+                      >
+                        <Pencil size={13} />
+                      </button>
                       <button
                         onClick={() => handleDeleteVaccine(v._id)}
                         className="p-1.5 rounded-lg hover:bg-red-50 text-stone-300 hover:text-red-500 transition-colors shrink-0"
