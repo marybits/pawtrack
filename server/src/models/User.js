@@ -16,7 +16,6 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
-    // Plaintext for v1. bcrypt deferred to v2.
     password: {
       type: String,
       required: [true, "Password is required"],

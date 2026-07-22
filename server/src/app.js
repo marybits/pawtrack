@@ -34,6 +34,14 @@ const loginLimiter = rateLimit({
   message: { message: "Too many login attempts — please try again in 15 minutes." },
 });
 
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,                   // 10 registrations per IP per hour
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many accounts created — please try again later." },
+});
+
 const parseLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 10,             // 10 AI parse calls per minute per IP
@@ -57,6 +65,7 @@ app.get("/health", (req, res) => {
 
 // Apply login rate limiter only to the login route, not register.
 app.use("/api/users/login", loginLimiter);
+app.use("/api/users/register", registerLimiter);
 app.use("/api/users", usersRouter);
 // Events route must be mounted before /api/pets so the more specific path
 // (/api/pets/:petId/events) is matched before the general /api/pets prefix.
