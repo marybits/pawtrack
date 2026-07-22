@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import swaggerUi from "swagger-ui-express";
+import { swaggerSpec } from "./swagger.js";
 import usersRouter from "./routes/users.js";
 import petsRouter from "./routes/pets.js";
 import eventsRouter from "./routes/events.js";
@@ -14,6 +16,9 @@ import { requireAuth } from "./middleware/auth.js";
 import { requirePetOwnership } from "./middleware/requirePetOwnership.js";
 
 const app = express();
+
+// API docs — mounted before helmet so CSP doesn't block Swagger UI's inline scripts.
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Security headers (X-Frame-Options, X-Content-Type-Options, HSTS, etc.)
 app.use(helmet());

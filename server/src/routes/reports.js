@@ -8,6 +8,43 @@ const router = Router({ mergeParams: true }); // inherit :petId from parent
 
 router.use(requireAuth, requirePetOwnership);
 
+/**
+ * @swagger
+ * /api/pets/{petId}/report:
+ *   get:
+ *     tags: [Reports]
+ *     summary: Download a clinical vet report PDF for a pet
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: petId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: days
+ *         schema:
+ *           type: integer
+ *           minimum: 7
+ *           maximum: 90
+ *           default: 30
+ *         description: Number of days to include in the report (7–90)
+ *       - in: query
+ *         name: concern
+ *         schema:
+ *           type: string
+ *         description: Owner's concern to include in the report header (max 200 chars)
+ *     responses:
+ *       200:
+ *         description: PDF file download
+ *         content:
+ *           application/pdf:
+ *             schema:
+ *               type: string
+ *               format: binary
+ *       404:
+ *         description: Pet not found
+ */
 router.get("/", async (req, res) => {
   const days = Math.min(Math.max(parseInt(req.query.days) || 30, 7), 90);
 

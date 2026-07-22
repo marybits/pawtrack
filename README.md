@@ -118,6 +118,15 @@ npm test    # runs 30 tests across 4 files with Vitest + mongodb-memory-server
 | `POST /api/events/parse` (AI) | 10 requests / min |
 | `GET /api/pets/:id/insights` (AI) | 5 requests / min |
 
+## API documentation
+
+Swagger UI is served at `/api/docs` when the server is running.
+
+- **Local:** http://localhost:5050/api/docs
+- **Production:** https://pawtrack-92is.onrender.com/api/docs *(available after redeployment)*
+
+All 14 endpoints are documented with method, path, parameters, and request/response descriptions. The `Authorize` button in the UI accepts a JWT from `/api/users/login` so you can try authenticated endpoints directly in the browser.
+
 ## AI usage
 
 Prompt-engineering decisions and AI-assisted code generation are documented per SEG2105's AI-usage requirement.

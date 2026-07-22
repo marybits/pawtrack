@@ -25,7 +25,9 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.3.0",
     "mongoose": "^9.7.1",
-    "pdfkit": "^0.19.1"
+    "pdfkit": "^0.19.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "mongodb-memory-server": "^11.2.0",
