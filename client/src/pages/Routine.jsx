@@ -255,9 +255,9 @@ function Skeleton({ className }) {
   return <div className={`bg-stone-100 rounded-2xl animate-pulse ${className}`} />;
 }
 
-function SectionCard({ title, children, empty, emptyText }) {
+function SectionCard({ title, children, empty, emptyText, className = "mb-4" }) {
   return (
-    <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_4px_12px_rgba(61,49,112,0.06)] hover:shadow-[0_4px_20px_rgba(61,49,112,0.10)] transition-shadow duration-200 p-4 mb-4">
+    <section className={`bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-[0_4px_12px_rgba(61,49,112,0.06)] hover:shadow-[0_4px_20px_rgba(61,49,112,0.10)] transition-shadow duration-200 p-4 ${className}`}>
       <div className="flex items-center gap-2 mb-4">
         <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
         <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em]">{title}</p>
@@ -536,8 +536,12 @@ export default function Routine() {
             </section>
           )}
 
+          {/* ── Charts — 2-column on desktop ─────────────────────────────── */}
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+
           {/* ── Activity trend ────────────────────────────────────────────── */}
           <SectionCard
+            className="mb-4 lg:mb-0"
             title="Activity — daily minutes (14 days)"
             empty={!loading && !hasActivity}
             emptyText="No activity logged yet."
@@ -583,7 +587,7 @@ export default function Routine() {
           </SectionCard>
 
           {/* ── Meal regularity grid ──────────────────────────────────────── */}
-          <SectionCard title="Meals — 14-day appetite">
+          <SectionCard className="mb-4 lg:mb-0" title="Meals — 14-day appetite">
             {loading ? (
               <Skeleton className="h-20 w-full" />
             ) : (
@@ -620,6 +624,7 @@ export default function Routine() {
 
           {/* ── Poop health ───────────────────────────────────────────────── */}
           <SectionCard
+            className="mb-4 lg:mb-0"
             title="Digestive health — consistency (30 days)"
             empty={!loading && !poopData}
             emptyText="Log at least 2 poop events to see the breakdown."
@@ -674,7 +679,7 @@ export default function Routine() {
 
           {/* ── Medication adherence ──────────────────────────────────────── */}
           {medAdherence.length > 0 && (
-            <SectionCard title="Medication adherence — this week">
+            <SectionCard className="mb-4 lg:mb-0" title="Medication adherence — this week">
               {loading ? (
                 <Skeleton className="h-20 w-full" />
               ) : (
@@ -702,6 +707,7 @@ export default function Routine() {
 
           {/* ── Weight trend ──────────────────────────────────────────────── */}
           <SectionCard
+            className="mb-4 lg:mb-0"
             title="Weight — trend"
             empty={!loading && !hasWeight}
             emptyText="Log at least 2 weight events to see the trend."
@@ -767,6 +773,8 @@ export default function Routine() {
               </>
             ) : null}
           </SectionCard>
+
+          </div>{/* end 2-col chart grid */}
         </>
       )}
     </div>

@@ -8,6 +8,8 @@ import eventsRouter from "./routes/events.js";
 import prescriptionsRouter from "./routes/prescriptions.js";
 import parseRouter from "./routes/parse.js";
 import insightsRouter from "./routes/insights.js";
+import reportsRouter from "./routes/reports.js";
+import vaccinesRouter from "./routes/vaccines.js";
 import { requireAuth } from "./middleware/auth.js";
 import { requirePetOwnership } from "./middleware/requirePetOwnership.js";
 
@@ -22,8 +24,8 @@ app.use(
   })
 );
 
-// Limit request body to 16kb — prevents large-payload denial-of-service.
-app.use(express.json({ limit: "16kb" }));
+// 2mb limit covers base64-encoded avatar images (~256px JPEG ≈ 50–80kb as base64).
+app.use(express.json({ limit: "2mb" }));
 
 // Rate limiters
 const loginLimiter = rateLimit({
@@ -73,6 +75,8 @@ app.use("/api/events/parse", parseLimiter, requireAuth, parseRouter);
 app.use("/api/pets/:petId/events",         requireAuth, requirePetOwnership, eventsRouter);
 app.use("/api/pets/:petId/prescriptions",  requireAuth, requirePetOwnership, prescriptionsRouter);
 app.use("/api/pets/:petId/insights",       requireAuth, requirePetOwnership, insightsLimiter, insightsRouter);
+app.use("/api/pets/:petId/report",         reportsRouter);
+app.use("/api/pets/:petId/vaccines",       requireAuth, requirePetOwnership, vaccinesRouter);
 app.use("/api/pets", petsRouter);
 
 // ── Protected routes ───────────────────────────────────────────────────────

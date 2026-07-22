@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle, Sparkles, List, SlidersHorizontal, X } from "lucide-react";
+import { CheckCircle, Sparkles, List, SlidersHorizontal, X, ChevronDown, ChevronRight, Pencil, Trash2, Check } from "lucide-react";
 import { getPets } from "../api/pets.js";
-import { logEvent, getEvents } from "../api/events.js";
+import { logEvent, getEvents, updateEvent, deleteEvent } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
 import NLEventInput from "../components/NLEventInput.jsx";
 import EventPreviewCard from "../components/EventPreviewCard.jsx";
+import DetailFields, { inputClass } from "../components/DetailFields.jsx";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const TYPE_CONFIG = {
@@ -52,143 +53,134 @@ function summarize(type, details = {}) {
   }
 }
 
-// ── Shared input style ─────────────────────────────────────────────────────
-const inputClass =
-  "w-full rounded-xl border border-stone-200 bg-[#F5F4F7] px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-[#3D3170]/30 focus:border-[#3D3170] transition-colors";
-
-// ── Detail fields per event type ───────────────────────────────────────────
-function DetailFields({ type, details, onChange }) {
-  function set(field) {
-    return (e) => onChange({ ...details, [field]: e.target.value });
-  }
-
-  switch (type) {
-    case "meal": {
-      const FINISHED_OPTS = [
-        { value: "all",     label: "Finished all" },
-        { value: "partial", label: "Left some"    },
-        { value: "refused", label: "Refused"      },
-      ];
-      return (
-        <div className="flex flex-col gap-2">
-          <div className="grid grid-cols-3 gap-2">
-            <input value={details.amount ?? ""} onChange={set("amount")} type="number" min="0" step="0.1" placeholder="Amount" className={inputClass} />
-            <input value={details.unit   ?? ""} onChange={set("unit")}   placeholder="cup / g / can"  className={inputClass} />
-            <input value={details.food   ?? ""} onChange={set("food")}   placeholder="Food name"      className={inputClass} />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-stone-400 shrink-0">Ate:</span>
-            {FINISHED_OPTS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => onChange({ ...details, finished: details.finished === value ? undefined : value })}
-                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  details.finished === value
-                    ? "bg-amber-700 text-white border-amber-700"
-                    : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => onChange({ ...details, askedForMore: !details.askedForMore })}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-colors ${
-              details.askedForMore
-                ? "bg-[#F0EEF3] border-[#3D3170]/30 text-[#3C2E37]"
-                : "border-stone-200 text-stone-500 hover:border-stone-400"
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full shrink-0 ${details.askedForMore ? "bg-[#3D3170]" : "bg-stone-300"}`} />
-            Pet asked for more food
-          </button>
-        </div>
-      );
-    }
-    case "medication":
-      return (
-        <div className="grid grid-cols-3 gap-2">
-          <input value={details.name ?? ""} onChange={set("name")} placeholder="Medication" className={`${inputClass} col-span-1`} />
-          <input value={details.dose ?? ""} onChange={set("dose")} type="number" min="0" step="0.1" placeholder="Dose" className={inputClass} />
-          <input value={details.unit ?? ""} onChange={set("unit")} placeholder="pill / ml" className={inputClass} />
-        </div>
-      );
-    case "activity":
-      return (
-        <div className="grid grid-cols-3 gap-2">
-          <input value={details.name     ?? ""} onChange={set("name")}     placeholder="Activity"   className={`${inputClass} col-span-1`} />
-          <input value={details.duration ?? ""} onChange={set("duration")} type="number" min="0" placeholder="Duration" className={inputClass} />
-          <input value={details.unit     ?? ""} onChange={set("unit")}     placeholder="min / hr"   className={inputClass} />
-        </div>
-      );
-    case "litter":
-      return (
-        <select value={details.action ?? ""} onChange={set("action")} className={inputClass}>
-          <option value="">Select action…</option>
-          <option value="scooped">Scooped</option>
-          <option value="cleaned">Full clean</option>
-          <option value="refilled">Refilled litter</option>
-        </select>
-      );
-    case "poop":
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <select value={details.consistency ?? ""} onChange={set("consistency")} className={inputClass}>
-            <option value="">Consistency…</option>
-            <option value="normal">Normal</option>
-            <option value="loose">Loose</option>
-            <option value="solid">Very solid</option>
-            <option value="liquid">Liquid</option>
-          </select>
-          <input value={details.color ?? ""} onChange={set("color")} placeholder="Color" className={inputClass} />
-        </div>
-      );
-    case "treats":
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <input value={details.name     ?? ""} onChange={set("name")}     placeholder="Treat name" className={inputClass} />
-          <input value={details.quantity ?? ""} onChange={set("quantity")} type="number" min="0" placeholder="Qty" className={inputClass} />
-        </div>
-      );
-    case "weight":
-      return (
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            value={details.weightKg ?? ""}
-            onChange={set("weightKg")}
-            type="number"
-            min="0"
-            step="0.1"
-            placeholder="Weight"
-            className={inputClass}
-          />
-          <select value={details.unit ?? "kg"} onChange={set("unit")} className={inputClass}>
-            <option value="kg">kg</option>
-            <option value="lbs">lbs</option>
-          </select>
-        </div>
-      );
-    default:
-      return null;
-  }
-}
-
-// ── Event item row ─────────────────────────────────────────────────────────
-function EventItem({ event }) {
+// ── Event item row (with edit + delete) ────────────────────────────────────
+function EventItem({ event, petId, onUpdated, onDeleted }) {
   const cfg = TYPE_CONFIG[event.type];
   const summary = summarize(event.type, event.details);
+
+  const [mode, setMode]         = useState(null); // null | "edit" | "confirm-delete"
+  const [editDetails, setEditDetails] = useState({});
+  const [editNotes, setEditNotes]     = useState("");
+  const [editTime, setEditTime]       = useState("");
+  const [saving, setSaving]           = useState(false);
+
+  function openEdit() {
+    setEditDetails({ ...(event.details ?? {}) });
+    setEditNotes(event.notes ?? "");
+    // format occurredAt for datetime-local input
+    const d = new Date(event.occurredAt);
+    setEditTime(new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+    setMode("edit");
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const updated = await updateEvent(petId, event._id, {
+        details: editDetails,
+        notes: editNotes.trim() || null,
+        occurredAt: new Date(editTime).toISOString(),
+      });
+      onUpdated(updated);
+      setMode(null);
+    } catch (err) {
+      console.error("Update failed:", err);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setSaving(true);
+    try {
+      await deleteEvent(petId, event._id);
+      onDeleted(event._id);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setSaving(false);
+    }
+  }
+
+  if (mode === "edit") {
+    return (
+      <div className="py-3 border-b border-stone-100 last:border-0 flex flex-col gap-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-semibold text-[#3D3170] capitalize">{cfg?.label ?? event.type}</span>
+          <button onClick={() => setMode(null)} className="text-xs text-stone-400 hover:text-stone-600 transition-colors">Cancel</button>
+        </div>
+        <DetailFields type={event.type} details={editDetails} onChange={setEditDetails} />
+        <input
+          value={editNotes}
+          onChange={(e) => setEditNotes(e.target.value)}
+          placeholder="Notes (optional)"
+          className={inputClass}
+        />
+        <input
+          type="datetime-local"
+          value={editTime}
+          max={new Date(new Date() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+          onChange={(e) => setEditTime(e.target.value)}
+          className={inputClass}
+        />
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl bg-[#3D3170] hover:bg-[#2E2454] text-white text-xs font-semibold transition-colors disabled:opacity-50"
+        >
+          <Check size={13} />
+          {saving ? "Saving…" : "Save changes"}
+        </button>
+      </div>
+    );
+  }
+
+  if (mode === "confirm-delete") {
+    return (
+      <div className="py-3 border-b border-stone-100 last:border-0 flex items-center gap-3">
+        <p className="text-xs text-stone-600 flex-1">Delete this {cfg?.label ?? event.type} event?</p>
+        <button
+          onClick={() => setMode(null)}
+          className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={saving}
+          className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saving ? "…" : "Delete"}
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0">
+    <div className="flex items-start gap-3 py-3 border-b border-stone-100 last:border-0 group">
       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${cfg?.dot ?? "bg-stone-300"}`} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-stone-800 capitalize">{cfg?.label ?? event.type}</p>
         {summary && <p className="text-xs text-stone-500 truncate">{summary}</p>}
         {event.notes && <p className="text-xs text-stone-400 italic truncate">{event.notes}</p>}
       </div>
-      <span className="text-xs text-stone-400 shrink-0 pt-0.5">{formatOccurredAt(event.occurredAt)}</span>
+      <span className="text-xs text-stone-400 shrink-0 pt-0.5 mr-1">{formatOccurredAt(event.occurredAt)}</span>
+      {/* action buttons — visible on hover (desktop) or always on touch */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <button
+          onClick={openEdit}
+          className="p-1.5 rounded-lg text-stone-300 hover:text-[#3D3170] hover:bg-[#F0EEF3] transition-colors"
+          aria-label="Edit event"
+        >
+          <Pencil size={12} />
+        </button>
+        <button
+          onClick={() => setMode("confirm-delete")}
+          className="p-1.5 rounded-lg text-stone-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+          aria-label="Delete event"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -229,8 +221,15 @@ export default function Log() {
   const [refreshKey, setRefreshKey]         = useState(0);
   const [prescriptions, setPrescriptions]   = useState([]);
 
+  // ── Prescription quick-confirm state ──────────────────────────────────
+  // rxConfirm: null | { rx, occurredAt, notes } — drives the confirm step
+  // manualMed: fallback flag to show manual fields when cards are available
+  const [rxConfirm, setRxConfirm]   = useState(null);
+  const [manualMed, setManualMed]   = useState(false);
+
   // ── Filter state ──────────────────────────────────────────────────────
   const [showFilters, setShowFilters] = useState(false);
+  const [eventsOpen, setEventsOpen]   = useState(false);
   const [filterType, setFilterType]   = useState("");
   const [filterFrom, setFilterFrom]   = useState("");
   const [filterTo, setFilterTo]       = useState("");
@@ -308,11 +307,49 @@ export default function Log() {
     setNlError("");
   }
 
+  // ── Prescription confirm handlers ─────────────────────────────────────
+  async function handleRxConfirm() {
+    if (!selectedPetId || !rxConfirm) return;
+    if (new Date(rxConfirm.occurredAt) > new Date()) {
+      setError("The event time can't be in the future.");
+      return;
+    }
+    setError("");
+    setSubmitting(true);
+    try {
+      const { rx } = rxConfirm;
+      await logEvent(selectedPetId, {
+        type: "medication",
+        details: {
+          name: rx.medicationName,
+          ...(rx.dose != null ? { dose: rx.dose }   : {}),
+          ...(rx.doseUnit     ? { unit: rx.doseUnit } : {}),
+        },
+        notes: rxConfirm.notes.trim() || undefined,
+        occurredAt: new Date(rxConfirm.occurredAt).toISOString(),
+      });
+      setRxConfirm(null);
+      setEventType(null);
+      setManualMed(false);
+      flashSuccess();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function handleRxCancel() {
+    setRxConfirm(null);
+  }
+
   // ── Structured form handlers ───────────────────────────────────────────
   function pickType(type) {
     setEventType(type);
     setDetails({});
     setError("");
+    setRxConfirm(null);
+    setManualMed(false);
   }
 
   function handleOccurredAtChange(e) {
@@ -351,7 +388,18 @@ export default function Log() {
     }
   }
 
-  const selectedPet = pets.find((p) => p._id === selectedPetId);
+  const selectedPet    = pets.find((p) => p._id === selectedPetId);
+  const availableTypes = selectedPet?.species === "cat"
+    ? EVENT_TYPES
+    : EVENT_TYPES.filter((t) => t !== "litter");
+
+  // Active prescriptions: active flag + within date range
+  const now = new Date();
+  const activePrescriptions = prescriptions.filter((rx) => {
+    const start = new Date(rx.startDate);
+    const end   = rx.endDate ? new Date(rx.endDate) : null;
+    return start <= now && (end === null || end >= now);
+  });
 
   return (
     <div>
@@ -381,7 +429,12 @@ export default function Log() {
             {pets.map((pet) => (
               <button
                 key={pet._id}
-                onClick={() => setSelectedPetId(pet._id)}
+                onClick={() => {
+                  setSelectedPetId(pet._id);
+                  if (pet.species !== "cat" && eventType === "litter") setEventType("");
+                  setRxConfirm(null);
+                  setManualMed(false);
+                }}
                 className={`px-3.5 py-1.5 rounded-full text-sm font-medium border transition-colors active:scale-[0.97] duration-150 ${
                   selectedPetId === pet._id
                     ? "bg-[#3D3170] text-white border-[#3D3170]"
@@ -396,7 +449,9 @@ export default function Log() {
       </section>
 
       {selectedPetId && (
-        <>
+        <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+          {/* ── Left col: form area ──────────────────────────────────────── */}
+          <div>
           {/* ── Pet context banner ──────────────────────────────────────── */}
           {selectedPet && (
             <div className="flex items-center gap-2.5 bg-gradient-to-r from-[#F0EEF3] to-[#FFFFFF] border border-[#E2E0EB]/60 rounded-2xl px-3.5 py-2.5 mb-5">
@@ -451,22 +506,100 @@ export default function Log() {
           {/* ── NL mode ─────────────────────────────────────────────────── */}
           {mode === "nl" && (
             <section className="mb-8">
-              {preview ? (
+              {rxConfirm ? (
+                /* ── Rx quick-confirm (NL path) ──────────────────────── */
+                <div className="rounded-2xl border border-rose-200 bg-[#FDF6F7] p-4 flex flex-col gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-rose-700 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-stone-800">{rxConfirm.rx.medicationName}</p>
+                      {(rxConfirm.rx.dose != null || rxConfirm.rx.doseUnit) && (
+                        <p className="text-xs text-stone-500">
+                          {[rxConfirm.rx.dose, rxConfirm.rx.doseUnit].filter((v) => v != null && v !== "").join(" ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRxCancel}
+                      className="text-xs text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      When?
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={rxConfirm.occurredAt}
+                      max={toDateTimeLocal()}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, occurredAt: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      Notes <span className="normal-case text-stone-300">(optional)</span>
+                    </label>
+                    <input
+                      value={rxConfirm.notes}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, notes: e.target.value }))}
+                      placeholder="Anything else worth noting…"
+                      className={inputClass}
+                    />
+                  </div>
+                  {error && (
+                    <div className="rounded-xl bg-rose-100 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRxConfirm}
+                    disabled={submitting}
+                    className="w-full bg-rose-700 hover:bg-rose-800 text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                  >
+                    {submitting ? "Saving…" : "Confirm & Save"}
+                  </button>
+                </div>
+              ) : preview ? (
                 <EventPreviewCard
                   preview={preview}
                   onConfirm={handleConfirmPreview}
                   onCancel={handleCancelPreview}
                   saving={saving}
+                  species={selectedPet?.species}
                 />
               ) : (
-                <NLEventInput
-                  petName={selectedPet?.name}
-                  onParsed={handleParsed}
-                  onError={setNlError}
-                  disabled={saving}
-                />
+                <>
+                  <NLEventInput
+                    petName={selectedPet?.name}
+                    species={selectedPet?.species}
+                    onParsed={handleParsed}
+                    onError={setNlError}
+                    disabled={saving}
+                  />
+                  {/* ── Prescription quick-log chips ─────────────────── */}
+                  {activePrescriptions.length > 0 && (
+                    <div className="mt-2.5 flex items-center flex-wrap gap-1.5">
+                      <span className="text-xs text-stone-400 shrink-0">Quick log:</span>
+                      {activePrescriptions.map((rx) => (
+                        <button
+                          key={rx._id}
+                          type="button"
+                          onClick={() => setRxConfirm({ rx, occurredAt: toDateTimeLocal(), notes: "" })}
+                          className="px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 transition-colors active:scale-[0.97] duration-150"
+                        >
+                          {rx.medicationName}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
-              {nlError && (
+              {!rxConfirm && nlError && (
                 <div className="mt-3 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
                   {nlError}
                 </div>
@@ -484,7 +617,7 @@ export default function Log() {
                   What happened?
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  {EVENT_TYPES.map((type) => {
+                  {availableTypes.map((type) => {
                     const { label, dot } = TYPE_CONFIG[type];
                     const active = eventType === type;
                     return (
@@ -507,203 +640,306 @@ export default function Log() {
               </section>
 
               {/* Per-type detail fields */}
-              {eventType && (
+              {eventType && !rxConfirm && (
                 <section className="mb-5">
-                  <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
-                    Details
-                  </p>
-
-                  {/* Prescription quick-select */}
-                  {eventType === "medication" && prescriptions.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      {prescriptions.map((rx) => {
-                        const active = details.name === rx.medicationName;
-                        return (
+                  {eventType === "medication" && activePrescriptions.length > 0 && !manualMed ? (
+                    /* ── Prescription card picker ─────────────────────── */
+                    <>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        Active prescriptions
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {activePrescriptions.map((rx) => (
                           <button
                             key={rx._id}
                             type="button"
-                            onClick={() =>
-                              setDetails((d) => ({
-                                ...d,
-                                name: rx.medicationName,
-                                ...(rx.dose     != null ? { dose: rx.dose }     : {}),
-                                ...(rx.doseUnit         ? { unit: rx.doseUnit } : {}),
-                              }))
-                            }
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                              active
-                                ? "bg-rose-700 text-white border-rose-700"
-                                : "bg-rose-50 text-rose-700 border-rose-200 hover:border-rose-400"
-                            }`}
+                            onClick={() => setRxConfirm({ rx, occurredAt: toDateTimeLocal(), notes: "" })}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 hover:border-rose-300 text-left transition-colors active:scale-[0.98] duration-150"
                           >
-                            {rx.medicationName}
+                            <span className="w-2 h-2 rounded-full bg-rose-700 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-stone-800">{rx.medicationName}</p>
+                              {(rx.dose != null || rx.doseUnit) && (
+                                <p className="text-xs text-stone-500">
+                                  {[rx.dose, rx.doseUnit].filter((v) => v != null && v !== "").join(" ")}
+                                </p>
+                              )}
+                            </div>
+                            <ChevronRight size={14} className="text-rose-400 shrink-0" />
                           </button>
-                        );
-                      })}
-                    </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setManualMed(true)}
+                        className="mt-2.5 text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                      >
+                        Log a one-off medication instead →
+                      </button>
+                    </>
+                  ) : (
+                    /* ── Standard detail fields ───────────────────────── */
+                    <>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        Details
+                      </p>
+                      <DetailFields type={eventType} details={details} onChange={setDetails} />
+                    </>
                   )}
-
-                  <DetailFields type={eventType} details={details} onChange={setDetails} />
                 </section>
               )}
 
-              {/* When + Notes */}
-              <section className="mb-5 flex flex-col gap-3">
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
-                    When?
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={occurredAt}
-                    max={toDateTimeLocal()}
-                    onChange={handleOccurredAtChange}
-                    className={`${inputClass} ${dateError ? "border-rose-400 focus:ring-rose-400/30 focus:border-rose-400" : ""}`}
-                  />
-                  {dateError && (
-                    <p className="mt-1.5 text-xs text-rose-600">{dateError}</p>
+              {/* ── Rx quick-confirm ─────────────────────────────────────── */}
+              {rxConfirm && (
+                <div className="mb-5 rounded-2xl border border-rose-200 bg-[#FDF6F7] p-4 flex flex-col gap-4">
+                  {/* Medication header */}
+                  <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-rose-700 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-stone-800">{rxConfirm.rx.medicationName}</p>
+                      {(rxConfirm.rx.dose != null || rxConfirm.rx.doseUnit) && (
+                        <p className="text-xs text-stone-500">
+                          {[rxConfirm.rx.dose, rxConfirm.rx.doseUnit].filter((v) => v != null && v !== "").join(" ")}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRxCancel}
+                      className="text-xs text-stone-400 hover:text-stone-600 transition-colors shrink-0"
+                    >
+                      Change
+                    </button>
+                  </div>
+                  {/* When */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      When?
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={rxConfirm.occurredAt}
+                      max={toDateTimeLocal()}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, occurredAt: e.target.value }))}
+                      className={inputClass}
+                    />
+                  </div>
+                  {/* Notes */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1.5">
+                      Notes <span className="normal-case text-stone-300">(optional)</span>
+                    </label>
+                    <input
+                      value={rxConfirm.notes}
+                      onChange={(e) => setRxConfirm((s) => ({ ...s, notes: e.target.value }))}
+                      placeholder="Anything else worth noting…"
+                      className={inputClass}
+                    />
+                  </div>
+                  {error && (
+                    <div className="rounded-xl bg-rose-100 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
                   )}
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
-                    Notes <span className="normal-case text-stone-300">(optional)</span>
-                  </label>
-                  <input
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Anything else worth noting…"
-                    className={inputClass}
-                  />
-                </div>
-              </section>
-
-              {error && (
-                <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
-                  {error}
+                  <button
+                    type="button"
+                    onClick={handleRxConfirm}
+                    disabled={submitting}
+                    className="w-full bg-rose-700 hover:bg-rose-800 text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                  >
+                    {submitting ? "Saving…" : "Confirm & Save"}
+                  </button>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting || !eventType || !!dateError}
-                className="w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
-              >
-                {submitting ? "Saving…" : "Log event"}
-              </button>
+              {/* When + Notes + submit — hidden when the Rx confirm card is showing */}
+              {!rxConfirm && (
+                <>
+                  <section className="mb-5 grid gap-3 md:grid-cols-2">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        When?
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={occurredAt}
+                        max={toDateTimeLocal()}
+                        onChange={handleOccurredAtChange}
+                        className={`${inputClass} ${dateError ? "border-rose-400 focus:ring-rose-400/30 focus:border-rose-400" : ""}`}
+                      />
+                      {dateError && (
+                        <p className="mt-1.5 text-xs text-rose-600">{dateError}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">
+                        Notes <span className="normal-case text-stone-300">(optional)</span>
+                      </label>
+                      <input
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Anything else worth noting…"
+                        className={inputClass}
+                      />
+                    </div>
+                  </section>
+
+                  {error && (
+                    <div className="mb-4 rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-sm text-rose-700">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={submitting || !eventType || !!dateError}
+                    className="w-full bg-[#3D3170] hover:bg-[#2E2454] text-white rounded-xl px-4 py-3 text-sm font-semibold transition-colors active:scale-[0.98] duration-150 disabled:opacity-40"
+                  >
+                    {submitting ? "Saving…" : "Log event"}
+                  </button>
+                </>
+              )}
             </form>
           )}
-        </>
-      )}
+          </div>{/* end form area */}
 
-      {/* ── Recent events ─────────────────────────────────────────────────── */}
-      {selectedPetId && (
-        <section>
-          {/* Header row */}
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em]">
-              {activeFilterCount > 0 ? "Events (filtered)" : "Recent events"}
-            </p>
-            <div className="flex items-center gap-2">
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearFilters}
-                  className="text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 transition-colors"
-                >
-                  <X size={11} /> Clear
-                </button>
-              )}
+          {/* ── Right col: recent events (collapsible) ───────────────────── */}
+          <section className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm overflow-hidden">
+
+            {/* ── Toggle header ──────────────────────────────────────────── */}
+            <div className="flex items-center gap-2 px-4 py-3">
+              {/* Clickable title + count + chevron */}
               <button
-                onClick={() => setShowFilters((v) => !v)}
-                className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors active:scale-[0.97] duration-150 ${
-                  showFilters || activeFilterCount > 0
-                    ? "bg-[#3D3170] text-white border-[#3D3170]"
-                    : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
-                }`}
+                onClick={() => setEventsOpen((v) => !v)}
+                className="flex-1 flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
               >
-                <SlidersHorizontal size={12} strokeWidth={2} />
-                Filters
-                {activeFilterCount > 0 && (
-                  <span className="bg-white text-[#3D3170] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
-                    {activeFilterCount}
-                  </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-[#3D3170] shrink-0" />
+                <p className="text-[10px] font-semibold text-stone-500 uppercase tracking-[0.08em] flex-1">
+                  {activeFilterCount > 0 ? "Events (filtered)" : "Recent events"}
+                </p>
+                {!eventsLoading && events.length > 0 && (
+                  <span className="text-xs text-stone-400 mr-1">{events.length} logged</span>
                 )}
+                <ChevronDown
+                  size={14}
+                  className={`text-stone-400 transition-transform duration-200 ${eventsOpen ? "rotate-180" : ""}`}
+                />
               </button>
-            </div>
-          </div>
 
-          {/* Filter panel */}
-          {showFilters && (
-            <div className="bg-[#F5F4F7] border border-stone-200/60 rounded-xl p-4 mb-3 flex flex-col gap-3">
-              <div>
-                <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">Type</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {[{ value: "", label: "All" }, ...EVENT_TYPES.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setFilterType(value)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                        filterType === value
-                          ? "bg-[#3D3170] text-white border-[#3D3170]"
-                          : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">From</label>
-                  <input
-                    type="date"
-                    value={filterFrom}
-                    max={filterTo || undefined}
-                    onChange={(e) => setFilterFrom(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">To</label>
-                  <input
-                    type="date"
-                    value={filterTo}
-                    min={filterFrom || undefined}
-                    onChange={(e) => setFilterTo(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
+              {/* Filter button — always visible so users can search while closed */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {activeFilterCount > 0 && (
+                  <button
+                    onClick={clearFilters}
+                    className="text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 transition-colors"
+                  >
+                    <X size={11} /> Clear
+                  </button>
+                )}
+                <button
+                  onClick={() => { setShowFilters((v) => !v); setEventsOpen(true); }}
+                  className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors active:scale-[0.97] duration-150 ${
+                    showFilters || activeFilterCount > 0
+                      ? "bg-[#3D3170] text-white border-[#3D3170]"
+                      : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
+                  }`}
+                >
+                  <SlidersHorizontal size={12} strokeWidth={2} />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="bg-white text-[#3D3170] text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
-          )}
 
-          {/* Events list */}
-          {eventsLoading ? (
-            <div className="space-y-2 pt-1">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-10 bg-stone-100 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          ) : events.length === 0 ? (
-            <p className="text-sm text-stone-400 py-4 text-center">
-              {activeFilterCount > 0 ? "No events match these filters." : "No events yet for this pet."}
-            </p>
-          ) : (
-            <div className="bg-[#FFFFFF] rounded-2xl border border-stone-200/60 shadow-sm px-4 divide-y divide-stone-100">
-              {(activeFilterCount > 0 ? events.slice(0, 50) : events.slice(0, 10)).map((ev) => (
-                <EventItem key={ev._id} event={ev} />
-              ))}
-            </div>
-          )}
+            {/* ── Collapsible body ───────────────────────────────────────── */}
+            {eventsOpen && (
+              <div className="px-4 pb-4 border-t border-stone-100">
 
-          {events.length > (activeFilterCount > 0 ? 50 : 10) && (
-            <p className="text-xs text-stone-400 text-center mt-2">
-              Showing {activeFilterCount > 0 ? 50 : 10} of {events.length} events
-            </p>
-          )}
-        </section>
+                {/* Filter panel */}
+                {showFilters && (
+                  <div className="bg-[#F5F4F7] border border-stone-200/60 rounded-xl p-4 mt-3 mb-3 flex flex-col gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-2">Type</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[{ value: "", label: "All" }, ...availableTypes.map((t) => ({ value: t, label: TYPE_CONFIG[t].label }))].map(({ value, label }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setFilterType(value)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                              filterType === value
+                                ? "bg-[#3D3170] text-white border-[#3D3170]"
+                                : "bg-[#FFFFFF] text-stone-600 border-stone-200 hover:border-stone-300"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">From</label>
+                        <input
+                          type="date"
+                          value={filterFrom}
+                          max={filterTo || undefined}
+                          onChange={(e) => setFilterFrom(e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-stone-400 uppercase tracking-[0.08em] mb-1">To</label>
+                        <input
+                          type="date"
+                          value={filterTo}
+                          min={filterFrom || undefined}
+                          onChange={(e) => setFilterTo(e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Events list */}
+                {eventsLoading ? (
+                  <div className="space-y-2 pt-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-10 bg-stone-100 rounded-xl animate-pulse" />
+                    ))}
+                  </div>
+                ) : events.length === 0 ? (
+                  <p className="text-sm text-stone-400 py-4 text-center">
+                    {activeFilterCount > 0 ? "No events match these filters." : "No events yet for this pet."}
+                  </p>
+                ) : (
+                  <div className="bg-[#F5F4F7] rounded-2xl mt-3 px-4 divide-y divide-stone-200/60">
+                    {(activeFilterCount > 0 ? events.slice(0, 50) : events.slice(0, 10)).map((ev) => (
+                      <EventItem
+                        key={ev._id}
+                        event={ev}
+                        petId={selectedPetId}
+                        onUpdated={(updated) => setEvents((prev) => prev.map((e) => e._id === updated._id ? updated : e))}
+                        onDeleted={(id) => setEvents((prev) => prev.filter((e) => e._id !== id))}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {events.length > (activeFilterCount > 0 ? 50 : 10) && (
+                  <p className="text-xs text-stone-400 text-center mt-2">
+                    Showing {activeFilterCount > 0 ? 50 : 10} of {events.length} events
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        </div>
       )}
     </div>
   );

@@ -288,8 +288,11 @@ function PetCard({ pet }) {
         onClick={() => navigate(`/pets/${pet._id}`)}
         className="flex items-center gap-3 w-full text-left group"
       >
-        <div className={`w-12 h-12 rounded-2xl ${accent.bg} flex items-center justify-center shrink-0`}>
-          <PawPrint size={22} strokeWidth={1.75} className={accent.text} />
+        <div className={`w-12 h-12 rounded-2xl ${accent.bg} flex items-center justify-center shrink-0 overflow-hidden`}>
+          {pet.avatarUrl
+            ? <img src={pet.avatarUrl} alt={pet.name} className="w-full h-full object-cover" />
+            : <PawPrint size={22} strokeWidth={1.75} className={accent.text} />
+          }
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-base font-bold text-stone-950 truncate">{pet.name}</p>
@@ -520,14 +523,14 @@ export default function Pets() {
       )}
 
       {/* ── List ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
+      <div className="grid gap-3 md:grid-cols-2">
         {loading ? (
           <>
             <PetSkeleton />
             <PetSkeleton />
           </>
         ) : pets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="md:col-span-2 flex flex-col items-center justify-center py-16 text-center">
             <div className="w-14 h-14 rounded-2xl bg-[#F0EEF3] flex items-center justify-center mb-4">
               <PawPrint size={26} strokeWidth={1.5} className="text-[#3D3170]" />
             </div>

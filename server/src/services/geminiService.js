@@ -1,6 +1,13 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const EVENT_TYPES = ["meal", "medication", "activity", "litter", "poop", "treats", "weight"];
+const ALL_EVENT_TYPES = ["meal", "medication", "activity", "litter", "poop", "treats", "weight"];
+
+// Types available for each species.  Only cats use a litter box.
+function allowedTypesFor(species) {
+  return (species ?? "").toLowerCase() === "cat"
+    ? ALL_EVENT_TYPES
+    : ALL_EVENT_TYPES.filter((t) => t !== "litter");
+}
 
 // ── System instruction ────────────────────────────────────────────────────────
 const SYSTEM_INSTRUCTION = `\
@@ -13,6 +20,8 @@ CHAIN-OF-THOUGHT FOR NUMBERS — apply this reasoning for every message:
     → type='activity' → durationMin MUST be 30, unit MUST be 'min', name='walk'
   "Luna ate half a cup of kibble at 7am"
     → type='meal' → amount MUST be 0.5, unit MUST be 'cup', food='kibble', finished=null (not mentioned)
+  "Scooby ate half a bowl of dry kibble"
+    → type='meal' → amount MUST be 0.5, unit MUST be 'bowl', food='dry kibble', finished=null (not mentioned)
   "Max wolfed down his food and kept begging for more"
     → type='meal' → finished='all', askedForMore=true
   "Charlie only ate half his bowl and walked away"
@@ -35,111 +44,106 @@ CRITICAL CONSTRAINTS:
   Resolve relative phrases ("an hour ago", "this morning") using that reference time.
 - Anything that doesn't fit a structured field goes in "notes".`;
 
-// ── Details schema — anyOf with per-type required fields ─────────────────────
-// Using anyOf lets us declare required fields conditionally per event type.
-// The description on each branch tells the model which branch to select.
-// The 'required' array on the activity branch forces durationMin to be filled.
-const detailsSchema = {
-  anyOf: [
-    {
-      // ── activity ──────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description:
-        "Use this branch when type='activity'. " +
-        "durationMin is REQUIRED — never omit it when a duration is stated.",
-      required: ["name", "durationMin", "unit"],
-      properties: {
-        name:        { type: Type.STRING, description: "Activity name, e.g. 'walk', 'run', 'play'." },
-        durationMin: { type: Type.NUMBER, description: "Duration in minutes. '30 minute walk'→30. '1 hour run'→60." },
-        unit:        { type: Type.STRING, enum: ["min", "hr", "km", "miles", "m"] },
-      },
-    },
-    {
-      // ── meal ──────────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description: "Use this branch when type='meal'.",
-      properties: {
-        amount:      { type: Type.NUMBER,  nullable: true, description: "Numeric quantity (e.g. 0.5, 1, 2)." },
-        unit:        { type: Type.STRING,  nullable: true, enum: ["cup", "cups", "g", "oz", "can", "serving"] },
-        food:        { type: Type.STRING,  nullable: true, description: "Food name, e.g. 'kibble', 'wet food'." },
-        finished:    { type: Type.STRING,  nullable: true, enum: ["all", "partial", "refused"],
-                       description: "'all' if pet finished everything, 'partial' if left some, 'refused' if did not eat. Null if not mentioned." },
-        askedForMore:{ type: Type.BOOLEAN, nullable: true,
-                       description: "true if pet begged, whined, or showed hunger after eating. false or null if not mentioned." },
-      },
-    },
-    {
-      // ── medication ────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description: "Use this branch when type='medication'.",
-      properties: {
-        name: { type: Type.STRING, nullable: true, description: "Medication name." },
-        dose: { type: Type.NUMBER, nullable: true, description: "Numeric dose amount." },
-        unit: { type: Type.STRING, nullable: true, enum: ["mg", "ml", "pill", "pills", "tablet", "drop"] },
-      },
-    },
-    {
-      // ── litter ────────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description: "Use this branch when type='litter'.",
-      properties: {
-        action: { type: Type.STRING, nullable: true, enum: ["scooped", "cleaned", "refilled"] },
-      },
-    },
-    {
-      // ── poop ──────────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description: "Use this branch when type='poop'.",
-      properties: {
-        consistency: { type: Type.STRING, nullable: true, enum: ["normal", "loose", "solid", "liquid"] },
-        color:       { type: Type.STRING, nullable: true, description: "English color word." },
-      },
-    },
-    {
-      // ── treats ────────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description: "Use this branch when type='treats'.",
-      properties: {
-        name:     { type: Type.STRING, nullable: true, description: "Treat name." },
-        quantity: { type: Type.NUMBER, nullable: true, description: "Number of treats given." },
-      },
-    },
-    {
-      // ── weight ────────────────────────────────────────────────────────────
-      type: Type.OBJECT,
-      description: "Use this branch when type='weight'. weightKg is REQUIRED — never omit it when a weight is stated.",
-      required: ["weightKg"],
-      properties: {
-        weightKg: { type: Type.NUMBER, description: "The weight value as given (numeric only). '4.2 kg'→4.2, '9.5 lbs'→9.5." },
-        unit:     { type: Type.STRING, nullable: true, enum: ["kg", "lbs"] },
-      },
-    },
-  ],
-};
-
-const responseSchema = {
-  type: Type.OBJECT,
-  properties: {
-    type: {
-      type: Type.STRING,
-      enum: EVENT_TYPES,
-      description: "The kind of pet care event being logged.",
-    },
-    occurredAt: {
-      type: Type.STRING,
-      description:
-        "ISO 8601 UTC datetime (e.g. 2026-06-24T07:00:00.000Z). " +
-        "Resolve relative phrases using the reference time in the prompt.",
-    },
-    details: detailsSchema,
-    notes: {
-      type: Type.STRING,
-      nullable: true,
-      description: "Free-text English context that does not fit any structured field.",
+// ── Details branches — one entry per event type ───────────────────────────────
+// Keyed by type so we can include/exclude individual branches when building the
+// schema dynamically (e.g. drop "litter" for dogs).
+const DETAILS_BRANCHES = {
+  activity: {
+    type: Type.OBJECT,
+    description:
+      "Use this branch when type='activity'. " +
+      "durationMin is REQUIRED — never omit it when a duration is stated.",
+    required: ["name", "durationMin", "unit"],
+    properties: {
+      name:        { type: Type.STRING, description: "Activity name, e.g. 'walk', 'run', 'play'." },
+      durationMin: { type: Type.NUMBER, description: "Duration in minutes. '30 minute walk'→30. '1 hour run'→60." },
+      unit:        { type: Type.STRING, enum: ["min", "hr", "km", "miles", "m"] },
     },
   },
-  required: ["type", "occurredAt", "details"],
+  meal: {
+    type: Type.OBJECT,
+    description: "Use this branch when type='meal'.",
+    properties: {
+      amount:      { type: Type.NUMBER,  nullable: true, description: "Numeric quantity (e.g. 0.5, 1, 2)." },
+      unit:        { type: Type.STRING,  nullable: true, enum: ["cup", "cups", "g", "oz", "can", "serving", "bowl"] },
+      food:        { type: Type.STRING,  nullable: true, description: "Food name, e.g. 'kibble', 'wet food'." },
+      finished:    { type: Type.STRING,  nullable: true, enum: ["all", "partial", "refused"],
+                     description: "'all' if pet finished everything, 'partial' if left some, 'refused' if did not eat. Null if not mentioned." },
+      askedForMore:{ type: Type.BOOLEAN, nullable: true,
+                     description: "true if pet begged, whined, or showed hunger after eating. false or null if not mentioned." },
+    },
+  },
+  medication: {
+    type: Type.OBJECT,
+    description: "Use this branch when type='medication'.",
+    properties: {
+      name: { type: Type.STRING, nullable: true, description: "Medication name." },
+      dose: { type: Type.NUMBER, nullable: true, description: "Numeric dose amount." },
+      unit: { type: Type.STRING, nullable: true, enum: ["mg", "ml", "pill", "pills", "tablet", "drop"] },
+    },
+  },
+  litter: {
+    type: Type.OBJECT,
+    description: "Use this branch when type='litter'.",
+    properties: {
+      action: { type: Type.STRING, nullable: true, enum: ["scooped", "cleaned", "refilled"] },
+    },
+  },
+  poop: {
+    type: Type.OBJECT,
+    description: "Use this branch when type='poop'.",
+    properties: {
+      consistency: { type: Type.STRING, nullable: true, enum: ["normal", "loose", "solid", "liquid"] },
+      color:       { type: Type.STRING, nullable: true, description: "English color word." },
+    },
+  },
+  treats: {
+    type: Type.OBJECT,
+    description: "Use this branch when type='treats'.",
+    properties: {
+      name:     { type: Type.STRING, nullable: true, description: "Treat name." },
+      quantity: { type: Type.NUMBER, nullable: true, description: "Number of treats given." },
+    },
+  },
+  weight: {
+    type: Type.OBJECT,
+    description: "Use this branch when type='weight'. weightKg is REQUIRED — never omit it when a weight is stated.",
+    required: ["weightKg"],
+    properties: {
+      weightKg: { type: Type.NUMBER, description: "The weight value as given (numeric only). '4.2 kg'→4.2, '9.5 lbs'→9.5." },
+      unit:     { type: Type.STRING, nullable: true, enum: ["kg", "lbs"] },
+    },
+  },
 };
+
+// Build a Gemini responseSchema scoped to the allowed event types for a species.
+function buildResponseSchema(allowedTypes) {
+  return {
+    type: Type.OBJECT,
+    properties: {
+      type: {
+        type: Type.STRING,
+        enum: allowedTypes,
+        description: "The kind of pet care event being logged.",
+      },
+      occurredAt: {
+        type: Type.STRING,
+        description:
+          "ISO 8601 UTC datetime (e.g. 2026-06-24T07:00:00.000Z). " +
+          "Resolve relative phrases using the reference time in the prompt.",
+      },
+      details: {
+        anyOf: allowedTypes.map((t) => DETAILS_BRANCHES[t]).filter(Boolean),
+      },
+      notes: {
+        type: Type.STRING,
+        nullable: true,
+        description: "Free-text English context that does not fit any structured field.",
+      },
+    },
+    required: ["type", "occurredAt", "details"],
+  };
+}
 
 // Post-extraction field allowlists — strips cross-contamination after mapping.
 const TYPE_DETAIL_FIELDS = {
@@ -161,7 +165,9 @@ function getClient() {
   return _client;
 }
 
-export async function parseEventFromText(text, petName, timezone) {
+export async function parseEventFromText(text, petName, timezone, species) {
+  const allowedTypes   = allowedTypesFor(species);
+  const responseSchema = buildResponseSchema(allowedTypes);
   const nowUtc = new Date().toISOString();
 
   // Build a local time string so Gemini can resolve "7am" in the user's timezone.
@@ -187,21 +193,49 @@ export async function parseEventFromText(text, petName, timezone) {
     (subject ? `${subject}\n` : "") +
     `User message: """${text}"""`;
 
-  const response = await getClient().models.generateContent({
-    model: "gemini-3.6-flash",
-    contents: prompt,
-    config: {
-      systemInstruction: SYSTEM_INSTRUCTION,
-      responseMimeType: "application/json",
-      responseSchema,
-    },
-  });
+  // Stage 1: API call — catch quota / network / server errors before touching response.
+  let response;
+  try {
+    response = await getClient().models.generateContent({
+      model: "gemini-3.6-flash",
+      contents: prompt,
+      config: {
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
+        responseSchema,
+      },
+    });
+  } catch (apiErr) {
+    const msg = apiErr.message ?? "";
+    const isQuota =
+      msg.includes("429") ||
+      msg.includes("RESOURCE_EXHAUSTED") ||
+      msg.includes("quota");
+    const wrapped = new Error(
+      isQuota ? `Gemini quota exceeded: ${msg}` : `Gemini API error: ${msg}`
+    );
+    wrapped.code = isQuota ? "QUOTA_EXCEEDED" : "API_ERROR";
+    throw wrapped;
+  }
 
+  // Stage 2: access response.text — the SDK getter throws on blocked/empty responses.
+  let rawText;
+  try {
+    rawText = response.text;
+  } catch (textErr) {
+    const wrapped = new Error(`Gemini returned no usable text: ${textErr.message}`);
+    wrapped.code = "API_ERROR";
+    throw wrapped;
+  }
+
+  // Stage 3: JSON parse — only reached when we have a real text payload.
   let parsed;
   try {
-    parsed = JSON.parse(response.text);
+    parsed = JSON.parse(rawText);
   } catch {
-    throw new Error(`Gemini returned non-JSON: ${response.text}`);
+    const wrapped = new Error(`Gemini returned non-JSON: ${rawText}`);
+    wrapped.code = "PARSE_ERROR";
+    throw wrapped;
   }
 
   // Clamp occurredAt to now if model produced a future time.

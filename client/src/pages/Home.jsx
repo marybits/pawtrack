@@ -124,8 +124,11 @@ function PetCard({ pet, events, prescriptions, onLog, onView }) {
         className="flex items-center justify-between w-full text-left group mb-3"
       >
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-[#F0EEF3] flex items-center justify-center shrink-0">
-            <PawPrint size={20} strokeWidth={1.75} className="text-[#3D3170]" />
+          <div className="w-11 h-11 rounded-2xl bg-[#F0EEF3] flex items-center justify-center shrink-0 overflow-hidden">
+            {pet.avatarUrl
+              ? <img src={pet.avatarUrl} alt={pet.name} className="w-full h-full object-cover" />
+              : <PawPrint size={20} strokeWidth={1.75} className="text-[#3D3170]" />
+            }
           </div>
           <div>
             <p className="text-base font-bold text-stone-950 leading-tight">{pet.name}</p>
@@ -300,7 +303,7 @@ export default function Home() {
 
       {/* ── Pet cards ────────────────────────────────────────────────────── */}
       {loading ? (
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-6">
           <Skeleton className="h-44" />
           <Skeleton className="h-44" />
         </div>
@@ -317,7 +320,7 @@ export default function Home() {
           </button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 mb-6">
           {pets.map((pet) => (
             <PetCard
               key={pet._id}
