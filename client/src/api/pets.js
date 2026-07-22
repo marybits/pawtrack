@@ -15,3 +15,6 @@ export const uploadPetAvatar = (petId, avatarUrl) =>
     method: "PATCH",
     body: JSON.stringify({ avatarUrl }),
   });
+
+export const deletePet = (id) =>
+  apiFetch(`/api/pets/${id}`, { method: "DELETE" });

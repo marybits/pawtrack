@@ -6,7 +6,7 @@ import {
   Scale, ChevronRight, ChevronDown, Camera, Loader2, FileText,
   Syringe, Trash2, Check, Pencil,
 } from "lucide-react";
-import { getPetById, uploadPetAvatar } from "../api/pets.js";
+import { getPetById, uploadPetAvatar, deletePet } from "../api/pets.js";
 import { apiFetchBlob } from "../api/apiClient.js";
 import { getEvents, updateEvent, deleteEvent } from "../api/events.js";
 import { getPrescriptions } from "../api/prescriptions.js";
@@ -308,7 +308,20 @@ export default function PetProfile() {
   const [vaccineForm, setVaccineForm]   = useState({ name: "", lastGiven: "", nextDue: "", notes: "", clinic: "" });
   const [addingVaccine, setAddingVaccine] = useState(false);
   const [showVaccineForm, setShowVaccineForm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting]           = useState(false);
   const fileInputRef                    = useRef(null);
+
+  async function handleDeletePet() {
+    setDeleting(true);
+    try {
+      await deletePet(petId);
+      navigate("/pets");
+    } catch (err) {
+      console.error("Delete pet failed:", err);
+      setDeleting(false);
+    }
+  }
 
   async function handleDownloadReport() {
     setDownloading(true);
@@ -843,6 +856,36 @@ export default function PetProfile() {
         </span>
         <ChevronRight size={14} className="text-stone-300" />
       </button>
+
+      {/* ── Delete pet ────────────────────────────────────────────────────── */}
+      {confirmDelete ? (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl border border-rose-200 bg-rose-50 mb-2">
+          <p className="text-xs text-rose-700 flex-1">
+            Delete {pet.name} and all their data? This can't be undone.
+          </p>
+          <button
+            onClick={() => setConfirmDelete(false)}
+            className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDeletePet}
+            disabled={deleting}
+            className="text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {deleting ? "…" : "Delete"}
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="w-full flex items-center gap-2 px-4 py-3 rounded-2xl border border-stone-200/60 bg-[#FFFFFF] text-sm text-rose-400 hover:border-rose-200 hover:text-rose-600 transition-colors active:scale-[0.98] mb-2"
+        >
+          <Trash2 size={13} />
+          Delete {pet.name}
+        </button>
+      )}
       </div>{/* end right col */}
       </div>{/* end 2-col grid */}
     </div>

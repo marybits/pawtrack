@@ -4,6 +4,7 @@ import {
   findPetById,
   updatePetAvatar,
   updatePet as updatePetService,
+  deletePet,
 } from "../services/petsService.js";
 
 export async function registerPet(req, res) {
@@ -78,6 +79,20 @@ export async function updatePet(req, res) {
       const message = Object.values(err.errors)[0].message;
       return res.status(400).json({ message });
     }
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+export async function removePet(req, res) {
+  try {
+    const pet = await findPetById(req.params.id);
+    if (!pet) return res.status(404).json({ message: "Pet not found" });
+    if (String(pet.ownerId) !== req.userId) return res.status(403).json({ message: "Forbidden" });
+
+    await deletePet(req.params.id);
+    return res.status(200).json({ message: "Pet deleted" });
+  } catch (err) {
+    if (err.name === "CastError") return res.status(404).json({ message: "Pet not found" });
     return res.status(500).json({ message: "Server error" });
   }
 }

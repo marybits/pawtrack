@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { registerPet, listPets, getPet, updatePet, uploadAvatar } from "../controllers/petsController.js";
+import { registerPet, listPets, getPet, updatePet, uploadAvatar, removePet } from "../controllers/petsController.js";
 
 const router = Router();
 
@@ -12,5 +12,6 @@ router.get("/", listPets);
 router.get("/:id", getPet);
 router.patch("/:id", updatePet);
 router.patch("/:id/avatar", uploadAvatar);
+router.delete("/:id", removePet);
 
 export default router;
